@@ -130,7 +130,7 @@ def main(calculator=0, date_filter=None):
     return df_sunarp, df_sunat, df_catusita
 
 if __name__ == "__main__":
-    CALCULATOR = 0
+    CALCULATOR = 1
     DATE_FILTER = '2024-12-01'
     df_sunarp, df_sunat, df_catusita = main(calculator=CALCULATOR, date_filter=DATE_FILTER)
     
