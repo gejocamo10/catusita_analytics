@@ -4,10 +4,10 @@ from pathlib import Path
 import os
 from datetime import datetime
 import shutil
-
-# Assuming these imports work with your project structure
 from utils.process_data.config import DATA_PATHS
 from utils.process_data.sunarp.config import FILE_CATEGORIES
+from utils.correlations.correlations_processor import process_correlations
+from utils.predictions.predictor import Predictor
 
 # Configure Streamlit page
 st.set_page_config(layout="wide", page_title="Procesador de Datos")
@@ -107,75 +107,102 @@ def app():
 
     st.markdown("### Aplicación de Procesamiento de Datos")
     
-    # Create three main columns
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown("#### Archivos Catusita")
+    # Create tabs for Upload and Predictions
+    tab1, tab2, tab3 = st.tabs(["Cargar Archivos", "Predicciones", "Dashboard"])
+
+    with tab1:
+        # Create three main columns
+        col1, col2, col3 = st.columns(3)
         
-        # Main Catusita files
-        ventas_files = create_uploader_section(
-            "Archivos de Ventas", 
-            'catusita_ventas', 
-            ['xlsx', 'csv'],
-            "Cargar archivos de ventas de Catusita"
-        )
-        
-        inventory_files = create_uploader_section(
-            "Inventario", 
-            'catusita_inventory', 
-            ['xlsx', 'csv'],
-            "Cargar archivo de inventario"
-        )
-        
-        kits_files = create_uploader_section(
-            "Kits", 
-            'catusita_kits', 
-            ['xlsx'],
-            "Cargar archivo de kits"
-        )
-        
-        blacklist_files = create_uploader_section(
-            "Lista Negra", 
-            'catusita_blacklist', 
-            ['xlsx'],
-            "Cargar archivo de lista negra"
-        )
-        
-        for file_group in [ventas_files, inventory_files, kits_files, blacklist_files]:
-            if file_group:
-                for file in file_group:
-                    success, result = process_uploaded_file(file, 'catusita')
-                    if success:
-                        st.session_state.upload_status['success'].append(f"✓ {file.name}")
-                    else:
-                        st.session_state.upload_status['error'].append(f"✗ {file.name}: {result}")
-    
-    with col2:
-        st.markdown("#### Archivos SUNARP")
-        
-        # SUNARP categories
-        sunarp_categories = {
-            'livianos': "Vehículos Livianos",
-            'pesados': "Vehículos Pesados",
-            'hibridos': "Vehículos Híbridos",
-            'remolques': "Remolques",
-            'menores': "Vehículos Menores"
-        }
-        
-        for key, title in sunarp_categories.items():
-            files = create_uploader_section(
-                title,
-                f'sunarp_{key}',
-                ['xlsx'],
-                f"Cargar archivos de {title}"
+        with col1:
+            st.markdown("#### Archivos Catusita")
+            
+            # Main Catusita files
+            ventas_files = create_uploader_section(
+                "Archivos de Ventas", 
+                'catusita_ventas', 
+                ['xlsx', 'csv'],
+                "Cargar archivos de ventas de Catusita"
             )
             
-            if files:
-                for file in files:
+            inventory_files = create_uploader_section(
+                "Inventario", 
+                'catusita_inventory', 
+                ['xlsx', 'csv'],
+                "Cargar archivo de inventario"
+            )
+            
+            kits_files = create_uploader_section(
+                "Kits", 
+                'catusita_kits', 
+                ['xlsx'],
+                "Cargar archivo de kits"
+            )
+            
+            blacklist_files = create_uploader_section(
+                "Lista Negra", 
+                'catusita_blacklist', 
+                ['xlsx'],
+                "Cargar archivo de lista negra"
+            )
+            
+            for file_group in [ventas_files, inventory_files, kits_files, blacklist_files]:
+                if file_group:
+                    for file in file_group:
+                        success, result = process_uploaded_file(file, 'catusita')
+                        if success:
+                            st.session_state.upload_status['success'].append(f"✓ {file.name}")
+                        else:
+                            st.session_state.upload_status['error'].append(f"✗ {file.name}: {result}")
+        
+        with col2:
+            st.markdown("#### Archivos SUNARP")
+            
+            # SUNARP categories
+            sunarp_categories = {
+                'livianos': "Vehículos Livianos",
+                'pesados': "Vehículos Pesados",
+                'hibridos': "Vehículos Híbridos",
+                'remolques': "Remolques",
+                'menores': "Vehículos Menores"
+            }
+            
+            for key, title in sunarp_categories.items():
+                files = create_uploader_section(
+                    title,
+                    f'sunarp_{key}',
+                    ['xlsx'],
+                    f"Cargar archivos de {title}"
+                )
+                
+                if files:
+                    for file in files:
+                        year = get_file_year(file.name)
+                        if year:
+                            success, result = process_uploaded_file(file, 'sunarp', key)
+                            if success:
+                                st.session_state.upload_status['success'].append(f"✓ {file.name}")
+                            else:
+                                st.session_state.upload_status['error'].append(f"✗ {file.name}: {result}")
+                        else:
+                            st.session_state.upload_status['error'].append(
+                                f"✗ {file.name}: No se pudo determinar el año"
+                            )
+        
+        with col3:
+            st.markdown("#### Archivos SUNAT")
+            sunat_files = create_uploader_section(
+                "Archivos SUNAT",
+                'sunat',
+                ['xlsx'],
+                "Cargar archivos SUNAT"
+            )
+            
+            if sunat_files:
+                for file in sunat_files:
                     year = get_file_year(file.name)
                     if year:
-                        success, result = process_uploaded_file(file, 'sunarp', key)
+                        success, result = process_uploaded_file(file, 'sunat')
                         if success:
                             st.session_state.upload_status['success'].append(f"✓ {file.name}")
                         else:
@@ -184,51 +211,221 @@ def app():
                         st.session_state.upload_status['error'].append(
                             f"✗ {file.name}: No se pudo determinar el año"
                         )
-    
-    with col3:
-        st.markdown("#### Archivos SUNAT")
-        sunat_files = create_uploader_section(
-            "Archivos SUNAT",
-            'sunat',
-            ['xlsx'],
-            "Cargar archivos SUNAT"
+
+        # Status display
+        if st.session_state.upload_status['success'] or st.session_state.upload_status['error']:
+            col1, col2, col3 = st.columns([1, 2, 1])
+            
+            with col2:
+                with st.expander("Mostrar Estado de Carga"):
+                    if st.session_state.upload_status['success']:
+                        st.markdown("**Archivos cargados exitosamente:**")
+                        for msg in st.session_state.upload_status['success'][-5:]:
+                            st.text(msg)
+                        if len(st.session_state.upload_status['success']) > 5:
+                            st.text(f"...y {len(st.session_state.upload_status['success']) - 5} más")
+                    
+                    if st.session_state.upload_status['error']:
+                        st.markdown("**Cargas fallidas:**")
+                        for msg in st.session_state.upload_status['error']:
+                            st.text(msg)
+                    
+                    if st.button("Limpiar Estado", key="clear_status"):
+                        st.session_state.upload_status = {'success': [], 'error': []}
+                        st.experimental_rerun()
+
+    with tab2:
+        st.markdown("### Predicciones")
+        
+        # Add date selector
+        prediction_date = st.date_input(
+            "Seleccione fecha hasta la cual usar datos para predicción",
+            value=datetime.now(),
+            help="Los datos posteriores a esta fecha no serán considerados para el entrenamiento"
         )
         
-        if sunat_files:
-            for file in sunat_files:
-                year = get_file_year(file.name)
-                if year:
-                    success, result = process_uploaded_file(file, 'sunat')
-                    if success:
-                        st.session_state.upload_status['success'].append(f"✓ {file.name}")
+        if st.button("Ejecutar Predicciones"):
+            with st.spinner("Procesando predicciones..."):
+                try:
+                    # Initialize predictor with selected date
+                    predictor = Predictor(prediction_date=prediction_date)
+                    
+                    # Process predictions
+                    results_df = predictor.process_predictions()
+                    
+                    if results_df is not None and not results_df.empty:
+                        # Get unique fuente_suministro values for filtering
+                        fuente_suministro_options = ['Todos'] + sorted(results_df['fuente_suministro'].unique().tolist())
+                        
+                        # Add filter in sidebar
+                        selected_fuente = st.selectbox(
+                            "Filtrar por Fuente de Suministro",
+                            options=fuente_suministro_options
+                        )
+                        
+                        # Filter results if needed
+                        if selected_fuente != 'Todos':
+                            filtered_results = results_df[results_df['fuente_suministro'] == selected_fuente]
+                        else:
+                            filtered_results = results_df
+                        
+                        # Display results
+                        st.markdown("#### Resultados de Predicción")
+                        st.dataframe(filtered_results)
+                        
+                        # Add download button
+                        csv = filtered_results.to_csv(index=False)
+                        st.download_button(
+                            label="Descargar Resultados",
+                            data=csv,
+                            file_name=f"predicciones_{prediction_date.strftime('%Y%m%d')}.csv",
+                            mime="text/csv"
+                        )
+                        
+                        # Display predictions plot
+                        st.markdown("#### Gráfico de Predicciones")
+                        try:
+                            predictions_df = pd.read_csv(DATA_PATHS['process'] / 'predictions.csv')
+                            predictions_df['fecha'] = pd.to_datetime(predictions_df['fecha'])
+                            
+                            if selected_fuente != 'Todos':
+                                predictions_df = predictions_df[
+                                    predictions_df['fuente_suministro'] == selected_fuente
+                                ]
+                            
+                            # Create plot using plotly
+                            import plotly.express as px
+                            fig = px.line(
+                                predictions_df, 
+                                x='fecha', 
+                                y='prediction',
+                                color='sku',
+                                title='Predicciones por SKU'
+                            )
+                            st.plotly_chart(fig)
+                            
+                        except Exception as e:
+                            st.error(f"Error al mostrar el gráfico: {str(e)}")
                     else:
-                        st.session_state.upload_status['error'].append(f"✗ {file.name}: {result}")
-                else:
-                    st.session_state.upload_status['error'].append(
-                        f"✗ {file.name}: No se pudo determinar el año"
-                    )
+                        st.warning("No se encontraron resultados para las predicciones")
+                        
+                except Exception as e:
+                    st.error(f"Error al procesar predicciones: {str(e)}")
 
-    # Status display
-    if st.session_state.upload_status['success'] or st.session_state.upload_status['error']:
-        col1, col2, col3 = st.columns([1, 2, 1])
+    with tab3:
+        st.markdown("### Dashboard")
         
-        with col2:
-            with st.expander("Mostrar Estado de Carga"):
-                if st.session_state.upload_status['success']:
-                    st.markdown("**Archivos cargados exitosamente:**")
-                    for msg in st.session_state.upload_status['success'][-5:]:
-                        st.text(msg)
-                    if len(st.session_state.upload_status['success']) > 5:
-                        st.text(f"...y {len(st.session_state.upload_status['success']) - 5} más")
+        try:
+            # Load dashboard data
+            dashboard_path = DATA_PATHS['cleaned'] / 'dashboard.csv'
+            dashboard_df = pd.read_csv(dashboard_path)
+            
+            # Create filters
+            with st.expander("Filtros"):
+                fuente_suministro_list = ['todos'] + sorted(dashboard_df['fuente_suministro'].unique().tolist())
                 
-                if st.session_state.upload_status['error']:
-                    st.markdown("**Cargas fallidas:**")
-                    for msg in st.session_state.upload_status['error']:
-                        st.text(msg)
+                filtro_fuente = st.selectbox(
+                    "Selecciona Fuente de Suministro:",
+                    fuente_suministro_list,
+                    index=0
+                )
                 
-                if st.button("Limpiar Estado", key="clear_status"):
-                    st.session_state.upload_status = {'success': [], 'error': []}
-                    st.experimental_rerun()
+                if filtro_fuente == 'todos':
+                    articulo_list = ['todos'] + sorted(dashboard_df['articulo'].unique().tolist())
+                else:
+                    articulo_list = ['todos'] + sorted(
+                        dashboard_df[dashboard_df['fuente_suministro'] == filtro_fuente]['articulo'].unique().tolist()
+                    )
+                
+                filtro_articulo = st.selectbox(
+                    "Selecciona Artículo:",
+                    articulo_list,
+                    index=0
+                )
+            
+            # Apply filters
+            filtered_df = dashboard_df.copy()
+            if filtro_fuente != 'todos':
+                filtered_df = filtered_df[filtered_df['fuente_suministro'] == filtro_fuente]
+            if filtro_articulo != 'todos':
+                filtered_df = filtered_df[filtered_df['articulo'] == filtro_articulo]
+            
+            # Metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Stock Total", f"{filtered_df['stock'].sum():,.0f}")
+            with col2:
+                st.metric("Demanda Mensual Total", f"{filtered_df['demanda_mensual'].sum():,.0f}")
+            with col3:
+                st.metric("Total Backorder", f"{filtered_df['backorder'].sum():,.0f}")
+            
+            # Display columns mapping
+            display_columns = {
+                'articulo': 'Artículo',
+                'stock': 'Stock',
+                'compras_recomendadas': 'Compras Recomendadas',
+                'demanda_mensual': 'Demanda Mensual',
+                'meses_proteccion': 'Meses Protección',
+                'index_riesgo': 'Índice Riesgo',
+                'riesgo': 'Riesgo',
+                'lt_x': 'Lead Time',
+                'mean_margen': 'Margen Promedio',
+                'ultima_fecha': 'Última Fecha',
+                'monto_usd': 'Monto USD',
+                'ultima_compra': 'Última Compra',
+                'costo_compra': 'Costo Compra',
+                'fuente_suministro': 'Fuente Suministro',
+                'hierarchy': 'Jerarquía',
+                'backorder': 'Backorder'
+            }
+            
+            # Rename columns first
+            filtered_df = filtered_df.rename(columns=display_columns)
+            
+            # Modified highlight function using new column names
+            def highlight_risk(row):
+                color_map = {
+                    'Verde': '#b7f898',
+                    'Amarillo': '#f6f69b',
+                    'Naranja': '#f8dc98',
+                    'Rojo': '#f69e9b'
+                }
+                
+                risk_value = row['Riesgo']
+                color = color_map.get(risk_value, '')
+                
+                return ['background-color: ' + color if color else ''] * len(row)
+            
+            # Apply styling with new column names
+            styled_df = filtered_df.style.format({
+                'Stock': '{:,.0f}',
+                'Compras Recomendadas': '{:,.0f}',
+                'Demanda Mensual': '{:,.0f}',
+                'Meses Protección': '{:,.2f}',
+                'Índice Riesgo': '{:,.2f}',
+                'Margen Promedio': '{:,.2%}',
+                'Monto USD': '{:,.2f}',
+                'Última Compra': '{:,.0f}',
+                'Costo Compra': '{:,.2f}',
+                'Backorder': '{:,.0f}'
+            }).apply(highlight_risk, axis=1)
+            
+            st.dataframe(styled_df)
+            
+            # Download button
+            csv = filtered_df.to_csv(index=False)
+            st.download_button(
+                label="Descargar Datos",
+                data=csv,
+                file_name="dashboard_filtered.csv",
+                mime="text/csv"
+            )
+            
+        except Exception as e:
+            st.error(f"Error al cargar o procesar los datos del dashboard: {str(e)}")
+            st.write("Tipo de error:", type(e).__name__)
+            import traceback
+            st.write("Traceback completo:", traceback.format_exc())
 
 if __name__ == "__main__":
     app()
