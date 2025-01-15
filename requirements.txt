@@ -1,0 +1,38 @@
+# attr
+# colorama
+# ConfigParser
+# cryptography
+# cython
+# dl
+# docutils
+# filelock
+# HTMLParser
+# ipython
+# ipywidgets
+# Jinja2
+# #jnius==1.1.0
+# keyring
+# numpy
+# pandas
+# #Pillow==11.0.0
+# plotly
+# protobuf
+# pyOpenSSL
+# python_dateutil
+# pywin32
+# railroad
+# redis
+# Sphinx
+# streamlit
+# thread
+# trove_classifiers
+# urllib3_secure_extra
+# xlrd
+#xmlrpclib==1.0.1
+yfinance
+unidecode
+scikit-learn
+xgboost
+xlrd
+scikit_learn
+openpyxl
