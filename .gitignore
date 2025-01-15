@@ -1,4 +1,5 @@
-data/
+data/process/
+data/raw/
 venv/
 utils/correlations/__pycache__/
 utils/dashboard/__pycache__/
