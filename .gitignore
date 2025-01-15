@@ -6,3 +6,4 @@ utils/dashboard/__pycache__/
 utils/predictions/__pycache__/
 utils/process_data/__pycache__/
 utils/rfm/__pycache__/
+requirements.txt
