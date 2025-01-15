@@ -4,5 +4,5 @@ venv/
 utils/correlations/__pycache__/
 utils/dashboard/__pycache__/
 utils/predictions/__pycache__/
-utils/processed_data/__pycache__/
+utils/process_data/__pycache__/
 utils/rfm/__pycache__/
