@@ -28,7 +28,8 @@
 # trove_classifiers
 # urllib3_secure_extra
 # xlrd
-#xmlrpclib==1.0.1
+# # xmlrpclib
+## comentar lo de arriba para desplegar la app
 yfinance
 unidecode
 scikit-learn
