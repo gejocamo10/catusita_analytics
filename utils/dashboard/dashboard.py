@@ -19,8 +19,10 @@ class DataProcessor:
         self.df_merged = None
         self.result_precio = None
         self.margin_result = None
+        self.margin_result_by_fuente = None
         self.df1_final = None
         self.dffinal2 = None
+        self.dffinal3 = None
 
     def load_data(self) -> None:
         self.results_models_comparison = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
@@ -127,8 +129,8 @@ class DataProcessor:
             labels=['Rojo', 'Naranja', 'Amarillo', 'Verde'], 
             right=False
         )
-        self.df_merged['ranking_riesgo'] = self.df_merged['index_riesgo'].rank(ascending=True).fillna(0).astype(int)
-        
+        self.df_merged['ranking_riesgo'] = self.df_merged['index_riesgo'].rank(method='dense', ascending=True).fillna(0).astype(int)
+
     def process_prices(self) -> None:
         df_precio = self.df_products[['articulo', 'cantidad', 'venta_pen', 'fecha']].copy()
         df_precio['fecha'] = pd.to_datetime(df_precio['fecha'], errors='coerce')
@@ -137,7 +139,7 @@ class DataProcessor:
         self.result_precio = df_precio.groupby('articulo').agg(precio=('precio', 'mean')).reset_index()
 
     def calculate_margin(self) -> None:
-        df_margen = self.df_products[['articulo', 'costo', 'venta_pen', 'fecha']].copy()
+        df_margen = self.df_products[['articulo', 'fuente_suministro','costo', 'venta_pen', 'fecha']].copy()
         df_margen['fecha'] = pd.to_datetime(df_margen['fecha'], errors='coerce')
         df_margen = df_margen[df_margen['fecha'].dt.year == 2024]
         df_margen['margen'] = df_margen['venta_pen'] / df_margen['costo'] - 1
@@ -145,6 +147,9 @@ class DataProcessor:
             total_venta_pen=('venta_pen', 'sum'),
             mean_margen=('margen', 'mean')
         ).reset_index().sort_values(by='total_venta_pen', ascending=False)
+        self.margin_result_by_fuente = df_margen.groupby('fuente_suministro').agg(
+            mean_margen=('margen', 'mean')
+        ).reset_index()
 
     def create_df1_final(self) -> None:
         df1 = self.df_merged[['fuente_suministro', 'date', 'articulo','real', 'catusita', 'caa','lt_x']].copy()
@@ -295,15 +300,26 @@ class DataProcessor:
         self.dffinal2['venta_acumulada'] = self.dffinal2['demanda_mensual'] * self.dffinal2['monto_usd'] * self.dffinal2['lt_x']
         self.dffinal2['deficit'] = self.dffinal2['venta_acumulada'] - (self.dffinal2['stock'] + self.dffinal2['backorder']) * self.dffinal2['monto_usd']
         self.dffinal2['deficit'] = self.dffinal2['deficit'].apply(lambda x: max(x, 0))  # El déficit no puede ser negativo
-        self.dffinal2['urgency'] = self.dffinal2['deficit'].rank(ascending=False).fillna(0).astype(int)
+        self.dffinal2['urgency'] = self.dffinal2['deficit'].rank(method='min', ascending=False).fillna(0).astype(int)
 
-
-        self.dffinal2 = self.dffinal2.sort_values(by='hierarchy')
+        # self.dffinal2 = self.dffinal2.sort_values(by='hierarchy')
         self.dffinal2 = self.dffinal2[[
             'articulo','stock','compras_recomendadas','demanda_mensual','meses_proteccion',
-            'index_riesgo','riesgo','ranking_riesgo','lt_x','mean_margen','ultima_fecha','monto_usd',
+            'riesgo','ranking_riesgo','lt_x','mean_margen','ultima_fecha','monto_usd',
             'ultima_compra','costo_compra','fuente_suministro','rfm','backorder'
         ]]
+
+        self.dffinal2.loc[self.dffinal2['demanda_mensual'] < 0, 'demanda_mensual'] = 0
+        self.dffinal2.loc[self.dffinal2['compras_recomendadas'] < 0, 'compras_recomendadas'] = 0
+
+        # self.dffinal2['recomendacion_monto'] = self.dffinal2['compras_recomendadas'] * self.dffinal2['costo_compra']
+        self.dffinal3 = self.dffinal2.groupby('fuente_suministro').agg(
+            lead_time=('lt_x', 'first'),
+            recomendacion=('costo_compra', 'sum'),
+            riesgo=('riesgo', lambda x: x.mode()[0] if not x.mode().empty else None)  # moda
+        )
+        self.dffinal3 = self.dffinal3.merge(self.margin_result_by_fuente, how='left', on='fuente_suministro')
+
 
     def process_all(self) -> None:
         self.load_data()

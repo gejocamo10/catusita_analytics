@@ -227,8 +227,13 @@ def main_processor(calculator=0, date_filter=None):
                 print(f"Generated dashboard data for {len(processor.dffinal2)} SKUs")
             else:
                 print("Warning: No dashboard data generated")
+            if processor.dffinal3 is not None:
+                processor.dffinal3.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
+                print(f"Generated dashboard data by fuente for {len(processor.dffinal3)} fuentes")
+            else:
+                print("Warning: No dashboard data by fuente generated")
         except Exception as e:
-            print(f"Error processing dashboard data: {str(e)}")
+            print(f"Error processing dashboard datasets: {str(e)}")
     
     return df_sunarp, df_sunat, df_catusita
 
@@ -336,7 +341,9 @@ def main():
         try:
             # Load dashboard data
             dashboard_path = DATA_PATHS['cleaned'] / 'dashboard.csv'
+            dashboard_path_by_fuente = DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv'
             dashboard_df = pd.read_csv(dashboard_path)
+            dashboard_df_by_fuente = pd.read_csv(dashboard_path_by_fuente)
             
             # Create filters
             with st.expander("Filtros"):
@@ -380,11 +387,11 @@ def main():
             # Display columns mapping
             display_columns = {
                 'articulo': 'Artículo',
-                'stock': 'Stock',
+                'stock': 'Inventario',
                 'compras_recomendadas': 'Compras Recomendadas',
                 'demanda_mensual': 'Demanda Mensual',
                 'meses_proteccion': 'Meses Protección',
-                'index_riesgo': 'Índice Riesgo',
+                # 'index_riesgo': 'Índice Riesgo',
                 'riesgo': 'Riesgo',
                 'ranking_riesgo': 'Ranking de Riesgo',
                 'lt_x': 'Lead Time',
@@ -394,14 +401,24 @@ def main():
                 'ultima_compra': 'Última Compra',
                 'costo_compra': 'Costo Compra',
                 'fuente_suministro': 'Fuente Suministro',
-                'rfm':'rfm',
+                'rfm':'Importancia RFM',
                 # 'urgency': 'Urgencia',
                 # 'hierarchy': 'Jerarquía',
                 'backorder': 'Backorder'
             }
+
+            display_columns_fuente = {
+                'fuente_suministro': 'F. Suministro',
+                'lead_time': 'Lead Time',
+                'recomendacion': 'Recomendacion USD',
+                'riesgo': 'Riesgo',
+                'mean_margen': 'Margen Promedio'
+            }
             
             # Rename columns first
             filtered_df = filtered_df.rename(columns=display_columns)
+
+            dashboard_df_by_fuente = dashboard_df_by_fuente.rename(columns=display_columns_fuente)
             
             # Modified highlight function using new column names
             def highlight_risk(row):
@@ -417,21 +434,42 @@ def main():
                 
                 return ['background-color: ' + color if color else ''] * len(row)
             
+            def highlight_risk_fuente(row):
+                color_map = {
+                    'Verde': '#b7f898',
+                    'Amarillo': '#f6f69b',
+                    'Naranja': '#f8dc98',
+                    'Rojo': '#f69e9b'
+                }
+                
+                risk_value = row['Riesgo']
+                color = color_map.get(risk_value, '')
+                
+                return ['background-color: ' + color if color else ''] * len(row)
+            
             # Apply styling with new column names
             styled_df = filtered_df.style.format({
-                'Stock': '{:,.0f}',
+                'Inventario': '{:,.0f}',
                 'Compras Recomendadas': '{:,.0f}',
                 'Demanda Mensual': '{:,.0f}',
                 'Meses Protección': '{:,.2f}',
-                'Índice Riesgo': '{:,.2f}',
+                # 'Índice Riesgo': '{:,.2f}',
                 'Margen Promedio': '{:,.2%}',
                 'Monto USD': '{:,.2f}',
                 'Última Compra': '{:,.0f}',
-                'Costo Compra': '{:,.2f}',
+                'Costo Compra': '{:,.0f}',
                 'Backorder': '{:,.0f}'
             }).apply(highlight_risk, axis=1)
+
+            styled_df_fuente = dashboard_df_by_fuente.style.format({
+                'Lead Times': '{:,.0f}',
+                'Recomendacion USD': '{:,.0f}',
+                'Margen Promedio': '{:,.0%}' 
+            }).apply(highlight_risk_fuente, axis=1)
             
             st.dataframe(styled_df)
+
+            st.dataframe(styled_df_fuente)
             
             # Download button
             csv = filtered_df.to_csv(index=False)

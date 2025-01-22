@@ -1,0 +1,36 @@
+fuente_suministro,lead_time,recomendacion,riesgo,mean_margen
+aisin - japon,6,464966.0,Verde,0.5036510882450239
+deestone,6,120330.5,Verde,0.4090128455214053
+denso - bujias - japon,3,13911.0,Verde,0.3835000925047643
+deruibo,4,7450.0,Verde,0.2769977638463221
+enertech - encendido,6,3942.0,Rojo,1.2911790802602192
+ishikawa - discos de freno,6,45862.5,Verde,0.9228328554789268
+ishikawa - pastillas de freno,6,12441.5,Verde,1.0270266443689466
+ito koyama - amortiguadores,6,305239.5,Verde,0.7621992444569757
+ito koyama - bocamazas,6,22210.5,Rojo,0.6454371743543263
+ito koyama - cremalleras,6,9600.0,Amarillo,0.5806397370538373
+ito koyama - direccion,6,6823.5,Verde,0.6572415797397093
+ito koyama - palieres,6,114612.0,Rojo,0.6261464462275071
+ito koyama - resortes,6,218616.0,Rojo,0.8708176280504986
+ito koyama - trapecios,6,13958.5,Verde,0.7369477630559883
+mann - brasil,4,313182.1691402793,Verde,0.3677319423156196
+monark - alemania,4,0.0,Verde,0.4273940187466749
+narva,4,563894.0238298178,Verde,0.4124676888767547
+novaquimica - peru,1,4972.5,Verde,0.40327678707476816
+plumillas - sakura,6,1426.0,Verde,0.9294240886217238
+prestone - mexico,3,33433.5,Rojo,0.45240555024655493
+prestone - usa,3,1817.9999999999998,Verde,0.27519965000057506
+prextoline - lubricantes,2,146180.5,Verde,0.5087816493230916
+prextoline - usa,4,1998.9999999999998,Verde,0.8151999572210983
+rover - usa,4,30255.0,Verde,0.6412831947430141
+sakura - radiadores,6,26657.5,Verde,0.8291514159382276
+sakura filter,6,1185183.5,Verde,1.0526434486088485
+seco - embragues,4,15509.0,Verde,0.3840779214302995
+sin definicion,0,0.0,,-0.9564356552428188
+tkl - taiwan,4,3390.0,Verde,0.41180784678821675
+toyo - japon,4,1563.3448392152786,Verde,0.41488501019967766
+valvoline,2,164750.5,Verde,0.4430783050272948
+valvoline - usa,3,204110.5,Verde,0.5121918155839724
+versachem - usa,1,13374.0,Verde,0.3738818371847311
+wagner - pastillas,3,13586.0,Verde,0.6647113650275607
+wagner locked - usa,2,2430.0,Verde,0.2932966438163972
