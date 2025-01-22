@@ -9,6 +9,7 @@ class DataProcessor:
         self.path = path
         self.results_models_comparison = None
         self.df_inventory = None
+        self.df_rfm = None
         self.tipo_de_cambio_df = None
         self.df_products = None
         self.back_order = None
@@ -24,6 +25,7 @@ class DataProcessor:
     def load_data(self) -> None:
         self.results_models_comparison = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
         self.df_inventory = pd.read_excel(f"{self.path}/data/raw/catusita/inventory.xlsx")
+        self.df_rfm = pd.read_csv(f"{self.path}/data/process/df_rfm.csv")
         self.tipo_de_cambio_df = pd.read_excel(f"{self.path}/data/raw/catusita/saldo de todo 04.11.2024.2.xls", skiprows=2)
         self.df_products = pd.read_csv(f"{self.path}/data/process/catusita_consolidated.csv")
         try:
@@ -125,7 +127,8 @@ class DataProcessor:
             labels=['Rojo', 'Naranja', 'Amarillo', 'Verde'], 
             right=False
         )
-
+        self.df_merged['ranking_riesgo'] = self.df_merged['index_riesgo'].rank(ascending=True).fillna(0).astype(int)
+        
     def process_prices(self) -> None:
         df_precio = self.df_products[['articulo', 'cantidad', 'venta_pen', 'fecha']].copy()
         df_precio['fecha'] = pd.to_datetime(df_precio['fecha'], errors='coerce')
@@ -177,10 +180,10 @@ class DataProcessor:
         df_merged_last = self.df_merged[self.df_merged['date'] == last_date].copy()
         
         df_merged_last['demanda_mensual'] = df_merged_last['caa'] / df_merged_last['lt_x']
-        self.dffinal2 = df_merged_last[['articulo', 'stock', 'caa', 'demanda_mensual', 'corr_sd', 'index_riesgo', 'riesgo', 'lt_x']]
+        self.dffinal2 = df_merged_last[['articulo', 'stock', 'caa', 'demanda_mensual', 'corr_sd', 'index_riesgo', 'riesgo', 'ranking_riesgo','lt_x']]
         self.dffinal2 = self.dffinal2.copy()
         self.dffinal2['meses_proteccion'] = self.dffinal2['corr_sd'] / self.dffinal2['demanda_mensual']
-        self.dffinal2 = self.dffinal2[['articulo', 'stock', 'caa', 'demanda_mensual', 'meses_proteccion', 'index_riesgo', 'riesgo', 'lt_x']]
+        self.dffinal2 = self.dffinal2[['articulo', 'stock', 'caa', 'demanda_mensual', 'meses_proteccion', 'index_riesgo', 'riesgo', 'ranking_riesgo','lt_x']]
         self.dffinal2 = self.dffinal2.merge(self.margin_result[['articulo', 'mean_margen']], how='left', on='articulo')
         self.dffinal2 = self.dffinal2.merge(self.merged_df_tc_final, how='left', left_on='articulo', right_on='codigo')
 
@@ -258,6 +261,15 @@ class DataProcessor:
             on='articulo'
         )
 
+        self.dffinal2 = self.dffinal2.merge(
+            self.df_rfm, 
+            left_on='articulo',
+            right_on='sku',
+            how='left'
+        )
+        self.dffinal2['rfm'] = self.dffinal2['rfm'].fillna(0)
+        self.dffinal2['rfm'] = self.dffinal2['rfm'].astype(int)
+
         df1_final_grouped['ganancia_oportunidad'] = (
             df1_final_grouped['ingreso_usd_con_recomendacion'] - 
             df1_final_grouped['ingreso_usd_sin_recomendacion']
@@ -280,11 +292,17 @@ class DataProcessor:
             on='fuente_suministro'
         )
 
+        self.dffinal2['venta_acumulada'] = self.dffinal2['demanda_mensual'] * self.dffinal2['monto_usd'] * self.dffinal2['lt_x']
+        self.dffinal2['deficit'] = self.dffinal2['venta_acumulada'] - (self.dffinal2['stock'] + self.dffinal2['backorder']) * self.dffinal2['monto_usd']
+        self.dffinal2['deficit'] = self.dffinal2['deficit'].apply(lambda x: max(x, 0))  # El déficit no puede ser negativo
+        self.dffinal2['urgency'] = self.dffinal2['deficit'].rank(ascending=False).fillna(0).astype(int)
+
+
         self.dffinal2 = self.dffinal2.sort_values(by='hierarchy')
         self.dffinal2 = self.dffinal2[[
             'articulo','stock','compras_recomendadas','demanda_mensual','meses_proteccion',
-            'index_riesgo','riesgo','lt_x','mean_margen','ultima_fecha','monto_usd',
-            'ultima_compra','costo_compra','fuente_suministro','hierarchy','backorder'
+            'index_riesgo','riesgo','ranking_riesgo','lt_x','mean_margen','ultima_fecha','monto_usd',
+            'ultima_compra','costo_compra','fuente_suministro','rfm','backorder'
         ]]
 
     def process_all(self) -> None:

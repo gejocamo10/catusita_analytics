@@ -83,6 +83,7 @@ class RFMProcessor:
         for i, sku in enumerate(lista_skus_top):
             df_rfm.loc[i] = [
                 sku,
+
                 int(sku in current_skus),
                 int(sku in skus_fechas),
                 int(sku in skus_clientes),
@@ -92,12 +93,16 @@ class RFMProcessor:
             ]
 
         df_rfm['rfm'] = df_rfm['resencia'] + df_rfm['fechas'] + df_rfm['monto']
-        return df_rfm[df_rfm.rfm == 3]['sku'].unique()
+        # return df_rfm[df_rfm.rfm == 3]['sku'].unique()
+        dfm_rfm_final = df_rfm[['sku','rfm']]
+        rfm_final_list = df_rfm[df_rfm.rfm == 3]['sku'].unique()
+        return rfm_final_list, dfm_rfm_final
 
 def process_rfm(df_catusita):
     """Main function to process RFM analysis"""
     processor = RFMProcessor(df_catusita)
-    lista_skus_rfm = processor.get_rfm_list()
+    # lista_skus_rfm = processor.get_rfm_list()
+    lista_skus_rfm, df_rfm = processor.get_rfm_list()
     
     sum_total_sells = processor.df_catusita["venta_pen"].sum()
     sum_rfm_sells = processor.df_catusita[
@@ -105,4 +110,5 @@ def process_rfm(df_catusita):
     ]["venta_pen"].sum()
     
     print(f"RFM SKUs represent {sum_rfm_sells/sum_total_sells:.2%} of total sales")
-    return lista_skus_rfm
+    # return lista_skus_rfm
+    return lista_skus_rfm, df_rfm

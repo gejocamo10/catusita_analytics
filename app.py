@@ -196,9 +196,10 @@ def main_processor(calculator=0, date_filter=None):
     
     if df_catusita is not None:
         print("\nProcessing RFM analysis...")
-        lista_skus_rfm = process_rfm(df_catusita)
+        lista_skus_rfm, df_rfm = process_rfm(df_catusita)
         df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
         df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
+        df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
         print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
     if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
@@ -385,6 +386,7 @@ def main():
                 'meses_proteccion': 'Meses Protección',
                 'index_riesgo': 'Índice Riesgo',
                 'riesgo': 'Riesgo',
+                'ranking_riesgo': 'Ranking de Riesgo',
                 'lt_x': 'Lead Time',
                 'mean_margen': 'Margen Promedio',
                 'ultima_fecha': 'Última Fecha',
@@ -392,7 +394,9 @@ def main():
                 'ultima_compra': 'Última Compra',
                 'costo_compra': 'Costo Compra',
                 'fuente_suministro': 'Fuente Suministro',
-                'hierarchy': 'Jerarquía',
+                'rfm':'rfm',
+                # 'urgency': 'Urgencia',
+                # 'hierarchy': 'Jerarquía',
                 'backorder': 'Backorder'
             }
             
