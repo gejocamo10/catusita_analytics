@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import re
 from datetime import datetime
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode, JsCode
 
 from utils.process_data.sunarp.sunarp_processor import SunarpProcessor
 from utils.process_data.sunat.sunat_processor import SunatProcessor
@@ -224,7 +225,7 @@ def main_processor(calculator=0, date_filter=None):
             processor.process_all()
             if processor.dffinal2 is not None:
                 processor.dffinal2.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
-                print(f"Generated dashboard data for {len(processor.dffinal2)} SKUs")
+                print(f"Generated dashboard data for {len(processor.dfdashboard)} SKUs")
             else:
                 print("Warning: No dashboard data generated")
             if processor.dffinal3 is not None:
@@ -232,6 +233,11 @@ def main_processor(calculator=0, date_filter=None):
                 print(f"Generated dashboard data by fuente for {len(processor.dffinal3)} fuentes")
             else:
                 print("Warning: No dashboard data by fuente generated")
+            if processor.dffinal2 is not None:
+                processor.dffinal2.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
+                print(f"Generated download data for {len(processor.dffinal2)} SKUs")
+            else:
+                print("Warning: No download data generated")
         except Exception as e:
             print(f"Error processing dashboard datasets: {str(e)}")
     
@@ -239,7 +245,7 @@ def main_processor(calculator=0, date_filter=None):
 
 def main():
     setup_directories()
-    st.title("Carga de Archivos")
+    st.title("Dashboard Catusita")
     
     # Create tabs
     tab1, tab2, tab3 = st.tabs(["Carga de Archivos", "Predicciones", "Recomendación De Compras"])
@@ -333,159 +339,145 @@ def main():
             if df_catusita is not None:
                 print(f"Catusita data shape: {df_catusita.shape}")
 
-    
-    # Tab 3: Recomendación De Compras
     with tab3:
-        st.markdown("### Dashboard")
+        st.markdown("### Resultados de Prediccion")
         
         try:
-            # Load dashboard data
+            # Carga de datos
             dashboard_path = DATA_PATHS['cleaned'] / 'dashboard.csv'
             dashboard_path_by_fuente = DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv'
+            download_path = DATA_PATHS['cleaned'] / 'download.csv'
+            
+            # Leer archivos CSV
             dashboard_df = pd.read_csv(dashboard_path)
             dashboard_df_by_fuente = pd.read_csv(dashboard_path_by_fuente)
-            
-            # Create filters
-            with st.expander("Filtros"):
-                fuente_suministro_list = ['todos'] + sorted(dashboard_df['fuente_suministro'].unique().tolist())
-                
-                filtro_fuente = st.selectbox(
-                    "Selecciona Fuente de Suministro:",
-                    fuente_suministro_list,
-                    index=0
-                )
-                
-                if filtro_fuente == 'todos':
-                    articulo_list = ['todos'] + sorted(dashboard_df['articulo'].unique().tolist())
-                else:
-                    articulo_list = ['todos'] + sorted(
-                        dashboard_df[dashboard_df['fuente_suministro'] == filtro_fuente]['articulo'].unique().tolist()
-                    )
-                
-                filtro_articulo = st.selectbox(
-                    "Selecciona Artículo:",
-                    articulo_list,
-                    index=0
-                )
-            
+            download_df = pd.read_csv(download_path)
+
             # Apply filters
-            filtered_df = dashboard_df.copy()
-            if filtro_fuente != 'todos':
-                filtered_df = filtered_df[filtered_df['fuente_suministro'] == filtro_fuente]
-            if filtro_articulo != 'todos':
-                filtered_df = filtered_df[filtered_df['articulo'] == filtro_articulo]
+            # if filtro_fuente != 'todos':
+            #     dashboard_df = dashboard_df[dashboard_df['fuente_suministro'] == filtro_fuente]
+            # if filtro_articulo != 'todos':
+            #     dashboard_df = dashboard_df[dashboard_df['articulo'] == filtro_articulo]
             
             # Metrics
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Stock Total", f"{filtered_df['stock'].sum():,.0f}")
+                st.metric("Recomendacion Total", f"{dashboard_df_by_fuente['Recomendacion USD'].sum():,.0f}")
             with col2:
-                st.metric("Demanda Mensual Total", f"{filtered_df['demanda_mensual'].sum():,.0f}")
+                st.metric("Demanda Mensual Total", f"{dashboard_df_by_fuente['Demanda Mensual USD'].sum():,.0f}")
             with col3:
-                st.metric("Total Backorder", f"{filtered_df['backorder'].sum():,.0f}")
-            
-            # Display columns mapping
-            display_columns = {
-                'articulo': 'Artículo',
-                'stock': 'Inventario',
-                'compras_recomendadas': 'Compras Recomendadas',
-                'demanda_mensual': 'Demanda Mensual',
-                'meses_proteccion': 'Meses Protección',
-                # 'index_riesgo': 'Índice Riesgo',
-                'riesgo': 'Riesgo',
-                'ranking_riesgo': 'Ranking de Riesgo',
-                'lt_x': 'Lead Time',
-                'mean_margen': 'Margen Promedio',
-                'ultima_fecha': 'Última Fecha',
-                'monto_usd': 'Monto USD',
-                'ultima_compra': 'Última Compra',
-                'costo_compra': 'Costo Compra',
-                'fuente_suministro': 'Fuente Suministro',
-                'rfm':'Importancia RFM',
-                # 'urgency': 'Urgencia',
-                # 'hierarchy': 'Jerarquía',
-                'backorder': 'Backorder'
-            }
+                st.metric("xxx", f"0")
 
-            display_columns_fuente = {
-                'fuente_suministro': 'F. Suministro',
-                'lead_time': 'Lead Time',
-                'recomendacion': 'Recomendacion USD',
-                'riesgo': 'Riesgo',
-                'mean_margen': 'Margen Promedio'
-            }
-            
-            # Rename columns first
-            filtered_df = filtered_df.rename(columns=display_columns)
-
-            dashboard_df_by_fuente = dashboard_df_by_fuente.rename(columns=display_columns_fuente)
             
             # Modified highlight function using new column names
             def highlight_risk(row):
                 color_map = {
-                    'Verde': '#b7f898',
-                    'Amarillo': '#f6f69b',
-                    'Naranja': '#f8dc98',
-                    'Rojo': '#f69e9b'
+                    'verde': '#b7f898',
+                    'amarillo': '#f6f69b',
+                    # 'naranja': '#f8dc98',
+                    'rojo': '#f69e9b'
                 }
                 
-                risk_value = row['Riesgo']
+                risk_value = row['Alerta']
                 color = color_map.get(risk_value, '')
                 
                 return ['background-color: ' + color if color else ''] * len(row)
             
             def highlight_risk_fuente(row):
                 color_map = {
-                    'Verde': '#b7f898',
-                    'Amarillo': '#f6f69b',
-                    'Naranja': '#f8dc98',
-                    'Rojo': '#f69e9b'
+                    'verde': '#b7f898',
+                    'amarillo': '#f6f69b',
+                    # 'naranja': '#f8dc98',
+                    'rojo': '#f69e9b'
                 }
                 
-                risk_value = row['Riesgo']
+                risk_value = row['Alerta']
                 color = color_map.get(risk_value, '')
                 
                 return ['background-color: ' + color if color else ''] * len(row)
-            
-            # Apply styling with new column names
-            styled_df = filtered_df.style.format({
-                'Inventario': '{:,.0f}',
-                'Compras Recomendadas': '{:,.0f}',
-                'Demanda Mensual': '{:,.0f}',
-                'Meses Protección': '{:,.2f}',
-                # 'Índice Riesgo': '{:,.2f}',
-                'Margen Promedio': '{:,.2%}',
-                'Monto USD': '{:,.2f}',
-                'Última Compra': '{:,.0f}',
-                'Costo Compra': '{:,.0f}',
-                'Backorder': '{:,.0f}'
-            }).apply(highlight_risk, axis=1)
 
             styled_df_fuente = dashboard_df_by_fuente.style.format({
                 'Lead Times': '{:,.0f}',
                 'Recomendacion USD': '{:,.0f}',
                 'Margen Promedio': '{:,.0%}' 
             }).apply(highlight_risk_fuente, axis=1)
-            
-            st.dataframe(styled_df)
 
-            st.dataframe(styled_df_fuente)
-            
+
+            # dashboard_df_by_fuente['Recomendacion USD'] = pd.to_numeric(dashboard_df_by_fuente['Recomendacion USD'], errors='coerce')
+            # dashboard_df_by_fuente['Demanda Mensual USD'] = pd.to_numeric(dashboard_df_by_fuente['Demanda Mensual USD'], errors='coerce')
+
+            gb = GridOptionsBuilder.from_dataframe(dashboard_df_by_fuente)
+            gb.configure_column(
+                "Recomendacion USD",
+                type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
+                valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : ''; }"
+            )
+            gb.configure_column(
+                "Demanda Mensual USD",
+                type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
+                valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : ''; }"
+            )
+            gb.configure_selection('single', use_checkbox=True)
+            grid_options_fuente = gb.build()
+            response = AgGrid(
+                dashboard_df_by_fuente,
+                gridOptions=grid_options_fuente,
+                height=300,
+                update_mode=GridUpdateMode.SELECTION_CHANGED,
+                data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+                fit_columns_on_grid_load=True
+            )            
+            selected_row = pd.DataFrame(response.get("selected_rows", []))  # Convertir a DataFrame si no lo es            
+            if not selected_row.empty:
+                # Acceder al valor de 'fuente_suministro'
+                fuente_seleccionada = selected_row['Fuente de Suministro'].iloc[0]
+                st.write(f"Fuente seleccionada: {fuente_seleccionada}")
+                dashboard_df = dashboard_df[dashboard_df['Fuente Suministro'] == fuente_seleccionada].reset_index(drop=True)
+                # Apply styling with new column names
+                styled_df = dashboard_df.style.format({
+                    'Inventario': '{:,.0f}',
+                    'Compras Recomendadas': '{:,.0f}',
+                    'Monto USD': '{:,.2f}',
+                    'Última Compra': '{:,.0f}',
+                    'Backorder': '{:,.0f}',
+                    'Recomendacion USD': '{:,.0F}'
+                }).apply(highlight_risk, axis=1)
+                st.write(styled_df)
+            else:
+                st.write("Seleccionar alguna fila")
+
             # Download button
-            csv = filtered_df.to_csv(index=False)
+            csv = download_df.to_csv(index=False)
             st.download_button(
                 label="Descargar Datos",
                 data=csv,
                 file_name="dashboard_filtered.csv",
                 mime="text/csv"
             )
-            
+        
+            # Leyenda de colores para la variable Alerta con emojis
+            st.markdown("### Leyenda de Alerta")
+            st.markdown(
+                """
+                <div style="margin-bottom: 10px;">
+                    <span style="font-size: 20px;">🔴</span> Rojo: Se quebró o se va a quebrar
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <span style="font-size: 20px;">🟡</span> Amarillo: Se está consumiento el inventario de seguridad
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <span style="font-size: 20px;">🟢</span> Verde: No se está consumiendo el inventario de seguridad
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         except Exception as e:
             st.error(f"Error al cargar o procesar los datos del dashboard: {str(e)}")
             st.write("Tipo de error:", type(e).__name__)
             import traceback
             st.write("Traceback completo:", traceback.format_exc())
-        
+
 
 if __name__ == "__main__":
     main()

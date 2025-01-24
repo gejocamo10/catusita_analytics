@@ -33,6 +33,7 @@ class Predictor:
 
         monthly_data['fecha'] = pd.to_datetime(monthly_data.apply(
             lambda row: pd.Timestamp(year=int(row['year']), month=int(row['month']), day=1), axis=1))
+        monthly_data['lt'] = monthly_data['lt'].fillna(0)
         return monthly_data.sort_values(by=['articulo', 'fecha'])
 
     def select_features_with_lasso(self, X, y, feature_columns, alpha=0.01):
@@ -211,7 +212,8 @@ class Predictor:
 
     def make_final_predictions(self, all_monthly_data, df_cov, df_correlaciones_sig):
         results = []
-
+        no_sku_process_list = []
+        count = 0
         for sku in all_monthly_data['articulo'].unique():
             print(f"Processing SKU: {sku}")
             try:
@@ -221,8 +223,8 @@ class Predictor:
                 lt = int(sku_data['lt'].iloc[-1])
                 last_year = sku_data['year'].max()
 
-                if len(sku_data) < 7:
-                    continue
+                # if len(sku_data) < 7:
+                #     continue
 
                 data, feature_columns = self.prepare_features_for_ml(
                     all_monthly_data, df_cov, df_correlaciones_sig, sku
@@ -235,7 +237,27 @@ class Predictor:
                     val_year=last_year - 1
                 )
 
-                if best_config is None:
+                # if best_config is None:
+                #     continue
+
+                if best_config is None or best_model is None:
+                    results.append({
+                        'sku': sku,
+                        'lt': lt,
+                        'date': last_date,
+                        'model': np.nan,
+                        'real': 0,
+                        'catusita': np.nan,
+                        'lookback_period': np.nan,
+                        'features_used': 'none',
+                        'caa': np.nan,
+                        'caa_lt': np.nan,
+                        'corr_sd': np.nan,
+                        'loss': np.nan
+                    })
+                    print(f"SKU {sku} no pudo ser evaluado. Datos insuficientes o problema en los datos.")
+                    no_sku_process_list.append({'sku':sku})
+                    count = count + 1
                     continue
 
                 best_model_name, lookback = best_config
@@ -302,7 +324,7 @@ class Predictor:
             except Exception as e:
                 print(f"Error processing SKU {sku}: {str(e)}")
                 continue
-
+        print(f"El numero de SKU sin procesar: {count}")
         return pd.DataFrame(results)
 
     def process_predictions(self):

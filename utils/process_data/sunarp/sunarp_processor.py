@@ -141,7 +141,7 @@ class SunarpProcessor:
         
         # Create fecha column
         df_consolidado['fecha'] = df_consolidado['ANIO'].astype(str) + '-' + df_consolidado['MES'].map(mes_to_num) + '-01'
-        print(df_consolidado[df_consolidado['ANIO']==2024])
+        # print(df_consolidado[df_consolidado['ANIO']==2024])
         
         # Group by all columns except VENTAS
         df_consolidado = df_consolidado.groupby(

@@ -103,7 +103,7 @@ class CorrelationsProcessor:
         df_partes = self.df_partes.copy()
         
         # Convert fecha to datetime if it's not already
-        print(df_partes)
+        # print(df_partes)
         df_partes['fecha'] = pd.to_datetime(df_partes['fecha'])
         
         # Extract year and month from fecha

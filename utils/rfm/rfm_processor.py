@@ -95,7 +95,7 @@ class RFMProcessor:
         df_rfm['rfm'] = df_rfm['resencia'] + df_rfm['fechas'] + df_rfm['monto']
         # return df_rfm[df_rfm.rfm == 3]['sku'].unique()
         dfm_rfm_final = df_rfm[['sku','rfm']]
-        rfm_final_list = df_rfm[df_rfm.rfm == 3]['sku'].unique()
+        rfm_final_list = df_rfm['sku'].unique()
         return rfm_final_list, dfm_rfm_final
 
 def process_rfm(df_catusita):

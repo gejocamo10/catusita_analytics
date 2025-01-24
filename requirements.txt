@@ -29,6 +29,7 @@
 # urllib3_secure_extra
 # xlrd
 # # xmlrpclib
+# streamlit-aggrid
 ## comentar lo de arriba para desplegar la app
 yfinance
 unidecode
