@@ -38,3 +38,4 @@ xgboost
 xlrd
 scikit_learn
 openpyxl
+st_aggrid 
