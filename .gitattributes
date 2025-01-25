@@ -1,2 +1,3 @@
 data/raw/catusita/Data de venta 01.01.21 a 06.12.24.xls filter=lfs diff=lfs merge=lfs -text
 data/raw/catusita/Data[[:space:]]de[[:space:]]venta[[:space:]]01.01.21[[:space:]]a[[:space:]]06.12.24.xls filter=lfs diff=lfs merge=lfs -text
+*.xls filter=lfs diff=lfs merge=lfs -text
