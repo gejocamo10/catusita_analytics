@@ -96,11 +96,11 @@ class DataProcessor:
         ]
 
         self.df_inventory['date'] = pd.to_datetime(self.df_inventory['date'], format='%d/%m/%Y')
-        max_date = self.results_models_comparison['date'].max()
-        self.df_inventory = self.df_inventory[
-            (self.df_inventory['date'] == max_date) & 
-            (self.df_inventory['codigo'].notna())
-        ]
+        # max_date = self.results_models_comparison['date'].max()
+        # self.df_inventory = self.df_inventory[
+        #     (self.df_inventory['date'] == max_date) & 
+        #     (self.df_inventory['codigo'].notna())
+        # ]
         self.df_inventory.loc[:, 'codigo'] = self.df_inventory['codigo'].str.lower()
 
     def merge_dataframes(self) -> None:
@@ -135,14 +135,14 @@ class DataProcessor:
     def process_prices(self) -> None:
         df_precio = self.df_products[['articulo', 'cantidad', 'venta_pen', 'fecha']].copy()
         df_precio['fecha'] = pd.to_datetime(df_precio['fecha'], errors='coerce')
-        df_precio = df_precio[df_precio['fecha'].dt.year == 2024]
+        # df_precio = df_precio[df_precio['fecha'].dt.year == 2024]
         df_precio['precio'] = df_precio['venta_pen'] / df_precio['cantidad']
         self.result_precio = df_precio.groupby('articulo').agg(precio=('precio', 'mean')).reset_index()
 
     def calculate_margin(self) -> None:
         df_margen = self.df_products[['articulo', 'fuente_suministro','costo', 'venta_pen', 'fecha']].copy()
         df_margen['fecha'] = pd.to_datetime(df_margen['fecha'], errors='coerce')
-        df_margen = df_margen[df_margen['fecha'].dt.year == 2024]
+        # df_margen = df_margen[df_margen['fecha'].dt.year == 2024]
         df_margen['margen'] = df_margen['venta_pen'] / df_margen['costo'] - 1
         self.margin_result = df_margen.groupby('articulo').agg(
             total_venta_pen=('venta_pen', 'sum'),
@@ -179,11 +179,12 @@ class DataProcessor:
         self.df1_final['ingreso_usd_sin_recomendacion'] = self.df1_final['ingreso_sin_recomendacion_ajustado'] / self.df1_final['tc']
         self.df1_final['ingreso_usd_con_recomendacion'] = self.df1_final['ingreso_con_recomendación_ajustado'] / self.df1_final['tc']
         self.df1_final = self.df1_final[['fuente_suministro', 'date', 'articulo', 'lt_x', 'ingreso_usd_sin_recomendacion', 'ingreso_usd_con_recomendacion', 'tc']]
-        self.df1_final = self.df1_final.drop_duplicates()
+        # self.df1_final = self.df1_final.drop_duplicates()
 
     def create_final_dataframe(self) -> None:
-        last_date = self.df_merged['date'].max()
-        df_merged_last = self.df_merged[self.df_merged['date'] == last_date].copy()
+        # last_date = self.df_merged['date'].max()
+        # df_merged_last = self.df_merged[self.df_merged['date'] == last_date].copy()
+        df_merged_last = self.df_merged.copy()
         
         df_merged_last['demanda_mensual'] = df_merged_last['caa'] / df_merged_last['lt_x']
         self.dffinal2 = df_merged_last[['articulo', 'stock', 'caa', 'demanda_mensual', 'corr_sd', 'lt_x']]
@@ -205,8 +206,8 @@ class DataProcessor:
         ]
         
         df_inventory2['FECHA AL'] = pd.to_datetime(df_inventory2['FECHA AL'], format='%d/%m/%Y')
-        max_date = df_inventory2['FECHA AL'].max()
-        df_inventory2 = df_inventory2[df_inventory2['FECHA AL'] == max_date]
+        # max_date = df_inventory2['FECHA AL'].max()
+        # df_inventory2 = df_inventory2[df_inventory2['FECHA AL'] == max_date]
         df_inventory2['FECHA AL'] = df_inventory2['FECHA AL'].dt.strftime('%d/%m/%Y')
         df_inventory2['CODIGO'] = df_inventory2['CODIGO'].str.lower()
         

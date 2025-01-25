@@ -345,7 +345,7 @@ class Predictor:
             df_correlaciones_sig
         )
 
-        results_df = results_df[results_df['date'] == results_df['date'].max()]
+        # results_df = results_df[results_df['date'] == results_df['date'].max()]
 
         if not results_df.empty:
             return results_df.sort_values('loss')

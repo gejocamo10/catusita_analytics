@@ -50,9 +50,9 @@ class RFMProcessor:
         df_agg = self.get_monthly_sales()
         df_temp = df_agg.iloc[:, 1:df_agg.shape[1]-2]
 
-        products_6m = df_temp.columns[df_temp.apply(lambda x: len(x[x > 0]) >= 6, axis=0)].tolist()
+        products_6m = df_temp.columns[df_temp.apply(lambda x: len(x[x > 0]) >= -6, axis=0)].tolist()
 
-        products_cvar = df_temp.columns[(df_temp.std()/df_temp.mean() >= 0.05)].tolist()
+        products_cvar = df_temp.columns[(df_temp.std()/df_temp.mean() >= -0.05)].tolist()
 
         return list(set(products_6m) & set(products_cvar))
 

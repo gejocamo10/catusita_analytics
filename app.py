@@ -198,8 +198,8 @@ def main_processor(calculator=0, date_filter=None):
     if df_catusita is not None:
         print("\nProcessing RFM analysis...")
         lista_skus_rfm, df_rfm = process_rfm(df_catusita)
-        df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
-        df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
+        # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
+        # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
         df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
         print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
@@ -223,8 +223,8 @@ def main_processor(calculator=0, date_filter=None):
             base_path = str(DATA_PATHS['cleaned'].parent.parent)
             processor = DataProcessor(base_path)
             processor.process_all()
-            if processor.dffinal2 is not None:
-                processor.dffinal2.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
+            if processor.dfdashboard is not None:
+                processor.dfdashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
                 print(f"Generated dashboard data for {len(processor.dfdashboard)} SKUs")
             else:
                 print("Warning: No dashboard data generated")
