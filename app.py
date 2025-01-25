@@ -407,16 +407,16 @@ def main():
             # dashboard_df_by_fuente['Demanda Mensual USD'] = pd.to_numeric(dashboard_df_by_fuente['Demanda Mensual USD'], errors='coerce')
 
             gb = GridOptionsBuilder.from_dataframe(dashboard_df_by_fuente)
-            gb.configure_column(
-                "Recomendacion USD",
-                type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
-                valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : ''; }"
-            )
-            gb.configure_column(
-                "Demanda Mensual USD",
-                type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
-                valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : ''; }"
-            )
+            # gb.configure_column(
+            #     "Recomendacion USD",
+            #     type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
+            #     valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : ''; }"
+            # )
+            # gb.configure_column(
+            #     "Demanda Mensual USD",
+            #     type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
+            #     valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : ''; }"
+            # )
             gb.configure_selection('single', use_checkbox=True)
             grid_options_fuente = gb.build()
             response = AgGrid(
