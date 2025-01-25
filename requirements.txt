@@ -1,40 +1,8 @@
-# attr
-# colorama
-# ConfigParser
-# cryptography
-# cython
-# dl
-# docutils
-# filelock
-# HTMLParser
-# ipython
-# ipywidgets
-# Jinja2
-# #jnius==1.1.0
-# keyring
-numpy
+streamlit
 pandas
-# #Pillow==11.0.0
-# plotly
-# protobuf
-# pyOpenSSL
-# python_dateutil
-# pywin32
-# railroad
-# redis
-# Sphinx
-# streamlit
-# thread
-# trove_classifiers
-# urllib3_secure_extra
-# xlrd
-# # xmlrpclib
-streamlit-aggrid
-## comentar lo de arriba para desplegar la app
-yfinance
-unidecode
+numpy
 scikit-learn
 xgboost
-xlrd
-scikit_learn
-openpyxl
+yfinance
+python-dateutil
+st-aggrid
