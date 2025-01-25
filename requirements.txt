@@ -12,8 +12,8 @@
 # Jinja2
 # #jnius==1.1.0
 # keyring
-# numpy
-# pandas
+numpy
+pandas
 # #Pillow==11.0.0
 # plotly
 # protobuf
