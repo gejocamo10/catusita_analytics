@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 import re
 from datetime import datetime
-from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode, JsCode
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
 from utils.process_data.sunarp.sunarp_processor import SunarpProcessor
 from utils.process_data.sunat.sunat_processor import SunatProcessor
