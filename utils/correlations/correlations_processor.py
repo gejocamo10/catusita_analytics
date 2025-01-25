@@ -200,13 +200,14 @@ class CorrelationsProcessor:
         all_skus = [col for col in df_catusita_agg.columns 
                     if col not in ['YEAR-MONTH', 'year', 'month', 'index']]
 
-        if self.skus_to_process:
-            skus_to_use = [sku for sku in all_skus if sku in self.skus_to_process]
-            print(f"Processing {len(skus_to_use)} SKUs found in df_skus_rfm.csv")
-        else:
-            skus_to_use = all_skus
-            print(f"Processing all {len(skus_to_use)} SKUs.")
-            
+        # if self.skus_to_process:
+        #     skus_to_use = [sku for sku in all_skus if sku in self.skus_to_process]
+        #     print(f"Processing {len(skus_to_use)} SKUs found in df_skus_rfm.csv")
+        # else:
+        #     skus_to_use = all_skus
+        #     print(f"Processing all {len(skus_to_use)} SKUs.")
+        skus_to_use = all_skus
+          
         total_skus = len(skus_to_use)
         for idx, sku in enumerate(skus_to_use, 1):
             if idx % 10 == 0:  
