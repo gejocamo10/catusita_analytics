@@ -189,6 +189,28 @@ def load_processed_data(date_filter=None):
     
     return df_sunarp, df_sunat, df_catusita
 
+def load_dates_dashboard():
+    df_ventas = pd.read_csv("data/process/catusita_consolidated.csv")
+    df_ventas['fecha'] = pd.to_datetime(df_ventas['fecha'], errors='coerce')
+    fecha_ventas = max(df_ventas['fecha'])
+
+    df_inventario = pd.read_excel("data/raw/catusita/inventory.xlsx")
+    df_inventario['FECHA AL'] = pd.to_datetime(df_inventario['FECHA AL'], format='%d/%m/%Y')
+    fecha_inventarios = max(df_inventario['FECHA AL'])
+
+    df_saldo = pd.read_excel("data/raw/catusita/saldo de todo 04.11.2024.2.xls", header=None)
+    valor_celda = df_saldo.iloc[0, 8]
+    if isinstance(valor_celda, str):
+        fecha = datetime.strptime(valor_celda, '%d/%m/%Y')
+    else:
+        fecha = pd.to_datetime(valor_celda)
+    fecha_saldos = fecha
+    
+    fecha_ventas = fecha_ventas.strftime('%Y-%m-%d')
+    fecha_inventarios = fecha_inventarios.strftime('%Y-%m-%d')
+    fecha_saldos = fecha_saldos.strftime('%Y-%m-%d')
+    return fecha_ventas, fecha_inventarios, fecha_saldos
+
 def main_processor(calculator=0, date_filter=None):
     if calculator == 1:
         df_sunarp, df_sunat, df_catusita = process_data(date_filter)
@@ -237,7 +259,7 @@ def main_processor(calculator=0, date_filter=None):
                 processor.dffinal2.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
                 print(f"Generated download data for {len(processor.dffinal2)} SKUs")
             else:
-                print("Warning: No download data generated")
+                print("Warning: No download data generated")           
         except Exception as e:
             print(f"Error processing dashboard datasets: {str(e)}")
     
@@ -454,7 +476,7 @@ def main():
                 file_name="dashboard_filtered.csv",
                 mime="text/csv"
             )
-        
+            
             # Leyenda de colores para la variable Alerta con emojis
             st.markdown("### Leyenda de Alerta")
             st.markdown(
@@ -471,6 +493,11 @@ def main():
                 """,
                 unsafe_allow_html=True
             )
+
+            fecha_ventas, fecha_inventarios, fecha_saldos = load_dates_dashboard()
+            st.write(f"📅 **Último registro de ventas:** {fecha_ventas}")
+            st.write(f"📅 **Último registro de inventarios:** {fecha_inventarios}")
+            st.write(f"📅 **Último registro de saldos:** {fecha_saldos}")
 
         except Exception as e:
             st.error(f"Error al cargar o procesar los datos del dashboard: {str(e)}")

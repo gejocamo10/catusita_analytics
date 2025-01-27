@@ -35,6 +35,7 @@ class DataProcessor:
             self.back_order = pd.read_excel(f"{self.path}/data/raw/catusita/backorder12_12.xlsx")
         except FileNotFoundError:
             self.back_order = pd.DataFrame()
+        
 
     def preprocess_exchange_rates(self) -> None:
         self.tipo_de_cambio_df = self.tipo_de_cambio_df[['Código','Mnd','Fob','Ult. Fecha','Ult. Compra']]
@@ -276,8 +277,7 @@ class DataProcessor:
             right_on='sku',
             how='left'
         )
-        self.dffinal2['rfm'] = self.dffinal2['rfm'].fillna(0)
-        self.dffinal2['rfm'] = self.dffinal2['rfm'].astype(int)
+        self.dffinal2['rfm'] = self.dffinal2['rfm'].fillna(0).astype(int)
 
         df1_final_grouped['ganancia_oportunidad'] = (
             df1_final_grouped['ingreso_usd_con_recomendacion'] - 
@@ -439,5 +439,3 @@ if __name__ == "__main__":
     processor.dfdashboard.to_csv(cleaned_path / 'dashboard.csv', index=False)
     processor.dffinal3.to_csv(cleaned_path / 'dashboard_by_fuente.csv', index=False)
     processor.dffinal2.to_csv(cleaned_path / 'download.csv', index=False)
-
-    #print(processor.dffinal3.head())
