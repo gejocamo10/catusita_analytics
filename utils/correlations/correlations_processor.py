@@ -266,6 +266,8 @@ class CorrelationsProcessor:
         print("Filtering significant correlations...")
         df_correlaciones_autos_sig = df_correlaciones_autos[abs(df_correlaciones_autos['corr']) > 0.3]
         df_correlaciones_partes_sig = df_correlaciones_partes[abs(df_correlaciones_partes['corr']) > 0.3]
+        df_correlaciones_autos_sig = df_correlaciones_autos
+        df_correlaciones_partes_sig = df_correlaciones_partes
         df_correlaciones_sig = pd.concat([df_correlaciones_autos_sig, df_correlaciones_partes_sig], 
                                        ignore_index=True)
         

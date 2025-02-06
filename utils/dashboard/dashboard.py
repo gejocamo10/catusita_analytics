@@ -7,73 +7,112 @@ from typing import Tuple, Optional
 class DataProcessor:
     def __init__(self, path: str):
         self.path = path
-        self.results_models_comparison = None
+        self.df_predictions = None # results_models_comparison
         self.df_inventory = None
         self.df_rfm = None
-        self.tipo_de_cambio_df = None
+        self.df_tc = None # tipo_de_cambio_df
         self.df_products = None
-        self.back_order = None
-        self.closing_prices = None
-        self.long_format = None
-        self.merged_df_tc_final = None
+        self.df_backorder = None # back_order
+        self.df_closing_prices = None # closing_prices
+        self.df_long_format = None # long_format
+        self.df_tc_final = None # merged_df_tc_final
         self.df_merged = None
-        self.result_precio = None
-        self.margin_result = None
-        self.margin_result_fuente = None
-        self.df1_final = None
-        self.dffinal2 = None
-        self.dffinal3 = None
-        self.dfdashboard = None
+        # self.df_precio_result = None # result_precio
+        self.df_margin_result = None # margin_result
+        self.df_download = None # dffinal2
+        self.df_dashboard_by_fuente = None # dffinal3
+        self.df_dashboard = None
 
-    def load_data(self) -> None:
-        self.results_models_comparison = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
+
+    def load_and_process_data(self) -> None:
+        self.df_predictions = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
         self.df_inventory = pd.read_excel(f"{self.path}/data/raw/catusita/inventory.xlsx")
         self.df_rfm = pd.read_csv(f"{self.path}/data/process/df_rfm.csv")
-        self.tipo_de_cambio_df = pd.read_excel(f"{self.path}/data/raw/catusita/saldo de todo 04.11.2024.2.xls", skiprows=2)
+        self.df_tc = pd.read_excel(f"{self.path}/data/raw/catusita/saldo de todo 04.11.2024.2.xls", skiprows=2)
         self.df_products = pd.read_csv(f"{self.path}/data/process/catusita_consolidated.csv")
         try:
-            self.back_order = pd.read_excel(f"{self.path}/data/raw/catusita/backorder12_12.xlsx")
+            self.df_backorder = pd.read_excel(f"{self.path}/data/raw/catusita/backorder12_12.xlsx")
         except FileNotFoundError:
-            self.back_order = pd.DataFrame()
+            self.df_backorder = pd.DataFrame()
+
+        ### to_datime
+        self.df_tc['Ult. Fecha'] = pd.to_datetime(self.df_tc['Ult. Fecha'], errors='coerce')
+        self.df_products['fecha'] = pd.to_datetime(self.df_products['fecha'])
+        self.df_predictions['date'] = pd.to_datetime(self.df_predictions['date'])
+        self.df_inventory['FECHA AL'] = pd.to_datetime(self.df_inventory['FECHA AL'], format='%Y%m%d')
         
+        ### processing data for raw tables
+        ## df_tc
+        self.df_tc = self.df_tc[['Código','Mnd','Fob','Ult. Fecha','Ult. Compra']]
+        self.df_tc.columns = ['codigo', 'moneda', 'monto', 'ultima_fecha', 'ultima_compra']
+        self.df_tc['codigo'] = self.df_tc['codigo'].astype(str)
+        self.df_tc = self.df_tc.dropna(subset=['ultima_fecha'])
+        self.df_tc['codigo'] = self.df_tc['codigo'].str.lower()
+        self.df_tc = self.df_tc[self.df_tc['ultima_fecha'].notna()]
+        
+        ## df_product
+        self.df_products['fecha_mensual'] = self.df_products['fecha'].dt.to_period('M').dt.to_timestamp()       
+        # crear variable precio
+        self.df_products['precio'] = self.df_products['venta_pen'] / self.df_products['cantidad']
+        # crear variable margen
+        self.df_products['margen'] = self.df_products['venta_pen'] / self.df_products['costo'] - 1
+        self.df_margin_result = self.df_products.groupby('articulo').agg(
+            total_venta_pen=('venta_pen', 'sum'),
+            mean_margen=('margen', 'mean')
+        ).reset_index().sort_values(by='total_venta_pen', ascending=False)
+        # agregar por fecha_mensual, articulo, fuente_suministro 
+        self.df_products = self.df_products.groupby(['fecha_mensual', 'articulo', 'fuente_suministro']).agg({
+            'codigo': 'first', 
+            'cantidad': 'sum',
+            'transacciones': 'sum',
+            'venta_pen': 'sum', 
+            'costo': 'mean',
+            'precio': 'mean',
+            'lt': 'first'
+        }).reset_index().rename(columns={'venta_pen': 'total_venta_pen','margen': 'mean_margen'})
 
-    def preprocess_exchange_rates(self) -> None:
-        self.tipo_de_cambio_df = self.tipo_de_cambio_df[['Código','Mnd','Fob','Ult. Fecha','Ult. Compra']]
-        self.tipo_de_cambio_df.columns = ['codigo', 'moneda', 'monto', 'ultima_fecha', 'ultima_compra']
-        self.tipo_de_cambio_df = self.tipo_de_cambio_df.copy()
-        self.tipo_de_cambio_df['codigo'] = self.tipo_de_cambio_df['codigo'].astype(str)
-        self.tipo_de_cambio_df = self.tipo_de_cambio_df.dropna(subset=['ultima_fecha'])
-        self.tipo_de_cambio_df['codigo'] = self.tipo_de_cambio_df['codigo'].str.lower()
-        self.tipo_de_cambio_df = self.tipo_de_cambio_df[self.tipo_de_cambio_df['ultima_fecha'].notna()]
-        self.tipo_de_cambio_df['ultima_fecha'] = pd.to_datetime(self.tipo_de_cambio_df['ultima_fecha'], errors='coerce')
+        ## df_predictions
+        self.df_predictions = self.df_predictions.rename(columns={'sku': 'articulo'})
 
-    def get_currency_data(self) -> None:
-        start = self.tipo_de_cambio_df['ultima_fecha'].min().date()
-        end = self.tipo_de_cambio_df['ultima_fecha'].max().date()
+        ## df_inventory
+        self.df_inventory.columns = ['cia', 'date', 'codigo', 'descripcion', 'um', 'stock']
+        self.df_inventory.loc[:, 'codigo'] = self.df_inventory['codigo'].str.lower()
+        self.df_inventory = self.df_inventory.groupby(['date','codigo','descripcion','um']).agg(
+            {
+                'stock':'sum'
+            }
+        ).reset_index()
+
+
+
+    def processing_price_usd(self) -> None:        
+        # Get currency data 
+        start = self.df_tc['ultima_fecha'].min().date()
+        end = self.df_tc['ultima_fecha'].max().date()
         currency_pairs = ['PENUSD=X', 'EURUSD=X', 'JPYUSD=X', 'GBPUSD=X']
         data = yf.download(currency_pairs, start=start, end=end)
-        self.closing_prices = data['Close']
-        self.closing_prices.columns = [col.split('.')[0] for col in self.closing_prices.columns]
+        self.df_closing_prices = data['Close']
+        self.df_closing_prices.columns = [col.split('.')[0] for col in self.df_closing_prices.columns]
 
-    def process_currency_data(self) -> None:
-        self.long_format = self.closing_prices.reset_index().melt(id_vars='Date', var_name='Currency Pair', value_name='Closing Price')
-        self.long_format['Currency Pair'] = self.long_format['Currency Pair'].str.replace('=X', '', regex=False)
-        self.long_format = self.long_format.dropna(subset=['Closing Price'])
+        # process currency data
+        self.df_long_format = self.df_closing_prices.reset_index().melt(id_vars='Date', var_name='Currency Pair', value_name='Closing Price')
+        self.df_long_format['Currency Pair'] = self.df_long_format['Currency Pair'].str.replace('=X', '', regex=False)
+        self.df_long_format = self.df_long_format.dropna(subset=['Closing Price'])
         
-        full_date_range = pd.date_range(start=self.long_format['Date'].min(), end=self.long_format['Date'].max(), freq='D')
-        currency_pairs = self.long_format['Currency Pair'].unique()
+        full_date_range = pd.date_range(start=self.df_long_format['Date'].min(), end=self.df_long_format['Date'].max(), freq='D')
+        currency_pairs = self.df_long_format['Currency Pair'].unique()
         complete_index = pd.MultiIndex.from_product([full_date_range, currency_pairs], names=['Date', 'Currency Pair'])
-        df_full = pd.DataFrame(index=complete_index).reset_index()
+        df_temp = pd.DataFrame(index=complete_index).reset_index()
         
-        self.long_format = df_full.merge(self.long_format, on=['Date', 'Currency Pair'], how='left')
-        self.long_format['Closing Price'] = self.long_format.groupby('Currency Pair')['Closing Price'].fillna(method='ffill')
-        self.long_format = self.long_format.rename(columns={'Closing Price': 'tc'})
+        self.df_long_format = df_temp.merge(self.df_long_format, on=['Date', 'Currency Pair'], how='left')
+        self.df_long_format['Closing Price'] = self.df_long_format.groupby('Currency Pair')['Closing Price'].ffill()
+        self.df_long_format = self.df_long_format.rename(columns={'Closing Price': 'tc'})
 
-    def merge_exchange_rates(self) -> None:
-        merged_df_tc = pd.merge(self.tipo_de_cambio_df, self.long_format, left_on='ultima_fecha', right_on='Date', how='left')
-        merged_df_tc['monto'] = pd.to_numeric(merged_df_tc['monto'], errors='coerce')
-        merged_df_tc['tc'] = pd.to_numeric(merged_df_tc['tc'], errors='coerce')
-        
+        # merge exchange rates
+        df_tc_merged = pd.merge(self.df_tc, self.df_long_format, left_on='ultima_fecha', right_on='Date', how='left')
+        df_tc_merged['monto'] = pd.to_numeric(df_tc_merged['monto'], errors='coerce')
+        df_tc_merged['tc'] = pd.to_numeric(df_tc_merged['tc'], errors='coerce')
+
         def convert_to_usd(row):
             if pd.isna(row['Currency Pair']) or row['moneda'] == 'USD':
                 return row['monto']
@@ -81,297 +120,166 @@ class DataProcessor:
             if row['moneda'] in currency_pair_map and row['Currency Pair'] == currency_pair_map[row['moneda']]:
                 return row['monto'] / row['tc'] if row['moneda'] == 'SOL' else row['monto'] * row['tc']
             return 0
-
-        merged_df_tc['monto_usd'] = merged_df_tc.apply(convert_to_usd, axis=1)
-        merged_df_tc = merged_df_tc[merged_df_tc['monto_usd'] != 0]
-        self.merged_df_tc_final = merged_df_tc[['codigo', 'ultima_fecha', 'monto_usd', 'ultima_compra']]
-        self.merged_df_tc_final = self.merged_df_tc_final[self.merged_df_tc_final['monto_usd'].notna()]
-
-    def process_inventory(self) -> None:
-        self.df_inventory = self.df_inventory.copy()
-        self.df_inventory.columns = ['cia', 'date', 'codigo', 'descripcion', 'um', 'stock']
         
-        self.df_inventory = self.df_inventory[
-            (self.df_inventory['date'] != 'Periodo') & 
-            (self.df_inventory['date'].notna())
-        ]
-
-        self.df_inventory['date'] = pd.to_datetime(self.df_inventory['date'], format='%d/%m/%Y')
-        # max_date = self.results_models_comparison['date'].max()
-        # self.df_inventory = self.df_inventory[
-        #     (self.df_inventory['date'] == max_date) & 
-        #     (self.df_inventory['codigo'].notna())
-        # ]
-        self.df_inventory.loc[:, 'codigo'] = self.df_inventory['codigo'].str.lower()
+        df_tc_merged['monto_usd'] = df_tc_merged.apply(convert_to_usd, axis=1)
+        df_tc_merged = df_tc_merged[df_tc_merged['monto_usd'] != 0]
+        self.df_tc_final = df_tc_merged[['codigo', 'ultima_fecha', 'monto_usd', 'ultima_compra']]
+        self.df_tc_final = self.df_tc_final[self.df_tc_final['monto_usd'].notna()]
 
     def merge_dataframes(self) -> None:
-        self.df_merged = self.results_models_comparison.copy()
-        self.df_merged = self.df_merged.rename(columns={'sku':'articulo'})
-        self.df_merged = self.df_merged.merge(
-            self.df_products[['articulo', 'fuente_suministro','lt']].drop_duplicates(), 
-            how='left', 
-            on='articulo'
-        )
-        self.df_merged['date'] = pd.to_datetime(self.df_merged['date'])
-        self.df_inventory['date'] = pd.to_datetime(self.df_inventory['date'])
-        self.df_merged = self.df_merged.merge(
-            self.df_inventory[['codigo', 'stock', 'date']].drop_duplicates(), 
-            how='left', 
-            left_on=['articulo', 'date'], 
-            right_on=['codigo', 'date']
-        )
-        self.df_merged['stock'] = self.df_merged['stock'].fillna(0)
-        self.df_merged = self.df_merged.drop(columns='codigo')
-
-    # def calculate_risk(self) -> None:
-    #     self.df_merged['index_riesgo'] = self.df_merged['stock'] / (self.df_merged['caa'] / self.df_merged['lt_x'])
-    #     self.df_merged['riesgo'] = pd.cut(
-    #         self.df_merged['index_riesgo'], 
-    #         bins=[-float('inf'), 1, 1.2, 1.5, float('inf')],
-    #         labels=['Rojo', 'Naranja', 'Amarillo', 'Verde'], 
-    #         right=False
-    #     )
-    #     self.df_merged['ranking_riesgo'] = self.df_merged['index_riesgo'].rank(method='dense', ascending=True).fillna(0).astype(int)
-
-    def process_prices(self) -> None:
-        df_precio = self.df_products[['articulo', 'cantidad', 'venta_pen', 'fecha']].copy()
-        df_precio['fecha'] = pd.to_datetime(df_precio['fecha'], errors='coerce')
-        # df_precio = df_precio[df_precio['fecha'].dt.year == 2024]
-        df_precio['precio'] = df_precio['venta_pen'] / df_precio['cantidad']
-        self.result_precio = df_precio.groupby('articulo').agg(precio=('precio', 'mean')).reset_index()
-
-    def calculate_margin(self) -> None:
-        df_margen = self.df_products[['articulo', 'fuente_suministro','costo', 'venta_pen', 'fecha']].copy()
-        df_margen['fecha'] = pd.to_datetime(df_margen['fecha'], errors='coerce')
-        # df_margen = df_margen[df_margen['fecha'].dt.year == 2024]
-        df_margen['margen'] = df_margen['venta_pen'] / df_margen['costo'] - 1
-        self.margin_result = df_margen.groupby('articulo').agg(
-            total_venta_pen=('venta_pen', 'sum'),
-            mean_margen=('margen', 'mean')
-        ).reset_index().sort_values(by='total_venta_pen', ascending=False)
-        self.margin_result_fuente = df_margen.groupby('articulo').agg(
-            mean_margen=('margen', 'mean')
-        ).reset_index()
-
-    def create_df1_final(self) -> None:
-        df1 = self.df_merged[['fuente_suministro', 'date', 'articulo','real', 'catusita', 'caa','lt_x']].copy()
-        df1 = df1.rename(columns={'catusita': 'venta_sin_recomendacion', 'caa': 'venta_con_recomendacion'})
-        self.df1_final = df1.merge(self.result_precio, how='left', on='articulo')
-        self.df1_final = self.df1_final[['fuente_suministro', 'date', 'articulo', 'venta_sin_recomendacion', 'venta_con_recomendacion','real', 'precio','lt_x']]
-        
-        self.df1_final['ingreso_sin_recomendacion'] = np.where(
-            self.df1_final['venta_sin_recomendacion'] < self.df1_final['real'],
-            self.df1_final['venta_sin_recomendacion'] * self.df1_final['precio'],
-            self.df1_final['real'] * self.df1_final['precio']
-        )
-        
-        self.df1_final['venta_con_recomendacion'] = np.where(
-            self.df1_final['venta_con_recomendacion'] < self.df1_final['real'],
-            self.df1_final['venta_con_recomendacion'] * self.df1_final['precio'],
-            self.df1_final['real'] * self.df1_final['precio']
-        )
-        
-        self.df1_final['ingreso_sin_recomendacion_ajustado'] = self.df1_final['ingreso_sin_recomendacion'] / (self.df1_final['lt_x'] * 0.83)
-        self.df1_final['ingreso_con_recomendación_ajustado'] = self.df1_final['venta_con_recomendacion'] / (self.df1_final['lt_x'] * 0.83)
-        
-        penusd_tc = self.long_format[self.long_format['Currency Pair'] == 'PENUSD'].groupby('Date')['tc'].last().reset_index()
-        self.df1_final = self.df1_final.merge(penusd_tc, how='left', left_on='date', right_on='Date')
-        self.df1_final['tc'] = 1/self.df1_final['tc']
-        self.df1_final['ingreso_usd_sin_recomendacion'] = self.df1_final['ingreso_sin_recomendacion_ajustado'] / self.df1_final['tc']
-        self.df1_final['ingreso_usd_con_recomendacion'] = self.df1_final['ingreso_con_recomendación_ajustado'] / self.df1_final['tc']
-        self.df1_final = self.df1_final[['fuente_suministro', 'date', 'articulo', 'lt_x', 'ingreso_usd_sin_recomendacion', 'ingreso_usd_con_recomendacion', 'tc']]
-        # self.df1_final = self.df1_final.drop_duplicates()
-
-    def create_final_dataframe(self) -> None:
-        # last_date = self.df_merged['date'].max()
-        # df_merged_last = self.df_merged[self.df_merged['date'] == last_date].copy()
-        df_merged_last = self.df_merged.copy()
-        
-        df_merged_last['demanda_mensual'] = df_merged_last['caa'] / df_merged_last['lt_x']
-        self.dffinal2 = df_merged_last[['articulo', 'stock', 'caa', 'demanda_mensual', 'corr_sd', 'lt_x']]
-        self.dffinal2 = self.dffinal2.copy()
-        self.dffinal2['meses_proteccion'] = self.dffinal2['corr_sd'] / self.dffinal2['demanda_mensual']
-        self.dffinal2 = self.dffinal2[['articulo', 'stock', 'caa', 'demanda_mensual', 'meses_proteccion', 'lt_x']]
-        self.dffinal2 = self.dffinal2.merge(self.margin_result[['articulo', 'mean_margen']], how='left', on='articulo')
-        self.dffinal2 = self.dffinal2.merge(self.merged_df_tc_final, how='left', left_on='articulo', right_on='codigo')
-
-    def add_compra_real(self) -> None:
-        df_predicciones = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
-        df_inventory2 = pd.read_excel(f"{self.path}/data/raw/catusita/inventory.xlsx")
-        
-        df_predicciones = df_predicciones.rename(columns={'sku': 'articulo'})
-        
-        df_inventory2 = df_inventory2[
-            (df_inventory2['FECHA AL'] != 'Periodo') & 
-            (df_inventory2['FECHA AL'].notna())
+        # cleaning df_inventory with df_products
+        max_date = self.df_inventory['date'].max()
+        self.df_inventory = self.df_inventory[
+            (self.df_inventory['date'] != 'Periodo') & 
+            (self.df_inventory['date'].notna())&
+            (self.df_inventory['date']==max_date)
         ]
-        
-        df_inventory2['FECHA AL'] = pd.to_datetime(df_inventory2['FECHA AL'], format='%d/%m/%Y')
-        # max_date = df_inventory2['FECHA AL'].max()
-        # df_inventory2 = df_inventory2[df_inventory2['FECHA AL'] == max_date]
-        df_inventory2['FECHA AL'] = df_inventory2['FECHA AL'].dt.strftime('%d/%m/%Y')
-        df_inventory2['CODIGO'] = df_inventory2['CODIGO'].str.lower()
-        
-        df_predicciones['date'] = pd.to_datetime(df_predicciones['date'], format='%Y-%m-%d')
-        df_predicciones['date'] = df_predicciones['date'].dt.strftime('%d/%m/%Y')
-        
-        merged_df = df_predicciones.merge(
-            df_inventory2[['FECHA AL', 'CODIGO', 'STOCK']], 
+        df_inventory_final=pd.concat(
+            [
+                pd.DataFrame(self.df_inventory['codigo'].unique(), columns=['codigo']),
+                pd.DataFrame(self.df_products['articulo'].unique(), columns=['codigo'])
+            ], 
+            ignore_index=True
+        ).drop_duplicates()
+        self.df_inventory = df_inventory_final.merge(
+            self.df_inventory[['date','codigo','stock']].drop_duplicates(),
+            how='left',
+            on='codigo'
+        )
+        self.df_inventory['stock']=self.df_inventory['stock'].fillna(0)
+        self.df_inventory['date'] = self.df_inventory['date'].fillna(max_date)
+        # merging df_predictions, df_products and df_invetory
+        self.df_merged = self.df_predictions.copy()
+        self.df_merged = self.df_merged.merge(
+            self.df_products[['articulo','fuente_suministro']].drop_duplicates(), 
             how='left', 
-            left_on=['articulo'], 
-            right_on=['CODIGO']
+            on = 'articulo'
+        )
+        self.df_merged = self.df_merged.merge(
+            self.df_inventory[['codigo','stock']], 
+            how='left', 
+            left_on=['articulo'],
+            right_on=['codigo']
         )
         
-        merged_df['STOCK'] = merged_df['STOCK'].fillna(0)
-        
-        if not self.back_order.empty:
-            merged_df = merged_df.merge(self.back_order, how='left', on='articulo')
-            merged_df['backorder'] = merged_df['backorder'].fillna(0)
-        else:
-            merged_df['backorder'] = 0
-        
-        merged_df['sobrante'] = np.maximum(merged_df['STOCK'] + merged_df['backorder'] - merged_df['caa_lt'], 0)
-        merged_df['nueva_compra_sugerida'] = np.maximum(merged_df['caa'] - merged_df['sobrante'], 0)
-        # merged_df['nueva_compra_sugerida'] = np.ceil(merged_df['nueva_compra_sugerida']).astype(int)
-        merged_df['nueva_compra_sugerida'] = np.ceil(merged_df['nueva_compra_sugerida']).fillna(0).astype(int)
-
-        merge_columns = merged_df[['articulo', 'nueva_compra_sugerida', 'caa', 'backorder']].copy()
-        
-        self.dffinal2 = self.dffinal2.merge(merge_columns, how='left', on='articulo')
-        self.dffinal2['compra_sugerida'] = self.dffinal2['nueva_compra_sugerida'].fillna(0)
-        self.dffinal2['backorder'] = self.dffinal2['backorder'].fillna(0)
-        
-        mask = self.dffinal2['demanda_mensual'] != 0
-        self.dffinal2.loc[mask, 'meses_proteccion'] = (
-            self.dffinal2.loc[mask, 'meses_proteccion'] * 
-            (self.dffinal2.loc[mask, 'compra_sugerida'] / self.dffinal2.loc[mask, 'demanda_mensual'])
-        )
-        
-        columns_to_drop = ['codigo', 'nueva_compra_sugerida', 'caa']
-        for col in columns_to_drop:
-            if col in self.dffinal2.columns:
-                self.dffinal2 = self.dffinal2.drop(columns=[col])
-
-    def finalize_processing(self) -> None:
-        self.dffinal2 = self.dffinal2.rename(columns={'caa_x': 'compras_recomendadas'})
-        self.dffinal2 = self.dffinal2.drop_duplicates()
-        # self.dffinal2['compras_recomendadas'] = self.dffinal2['compras_recomendadas'].apply(lambda x: math.ceil(x / 50) * 50)
-        self.dffinal2['compras_recomendadas'] = self.dffinal2['compras_recomendadas'].fillna(0).apply(lambda x: math.ceil(x / 50) * 50)
-        self.dffinal2['costo_compra'] = self.dffinal2['monto_usd'] * self.dffinal2['compras_recomendadas']
-
-        df1_final_filled = self.df1_final.fillna(0)
-        df1_final_grouped = df1_final_filled.groupby(['articulo', 'fuente_suministro']).agg({
-            'ingreso_usd_sin_recomendacion': 'sum',
-            'ingreso_usd_con_recomendacion': 'sum'
-        }).reset_index()
-
-        self.dffinal2 = self.dffinal2.merge(
-            df1_final_grouped[['articulo', 'fuente_suministro']], 
+        # merging df_tc_final, df_backorder, rfm and df_margin_result
+        self.df_merged = self.df_merged.merge(
+            self.df_margin_result[['articulo', 'mean_margen']], 
             how='left', 
             on='articulo'
         )
-
-        self.dffinal2 = self.dffinal2.merge(
+        self.df_merged = self.df_merged.merge(
+            self.df_tc_final, 
+            how='left', 
+            left_on='articulo', 
+            right_on='codigo'
+        )
+        if not self.df_backorder.empty:
+            self.df_merged = self.df_merged.merge(
+                self.df_backorder, 
+                how='left', 
+                on='articulo'
+            )
+        else:
+            self.df_merged['backorder'] = np.nan
+        self.df_merged = self.df_merged.merge(
             self.df_rfm, 
             left_on='articulo',
             right_on='sku',
             how='left'
         )
-        self.dffinal2['rfm'] = self.dffinal2['rfm'].fillna(0).astype(int)
+        self.df_merged['rfm'] = self.df_merged['rfm'].fillna(0).astype(int)
+        self.df_merged = self.df_merged.drop_duplicates()
 
-        df1_final_grouped['ganancia_oportunidad'] = (
-            df1_final_grouped['ingreso_usd_con_recomendacion'] - 
-            df1_final_grouped['ingreso_usd_sin_recomendacion']
+    def adding_final_variables(self) -> None:
+        # adding demanda_mensual and meses_proteccion    
+        self.df_merged['demanda_mensual'] = self.df_merged['caa'] / self.df_merged['lt']
+        self.df_merged['meses_proteccion'] = self.df_merged['corr_sd'] / self.df_merged['demanda_mensual']
+
+        # adding compra_sugerida
+        self.df_merged['sobrante'] = np.maximum(self.df_merged['stock'] + self.df_merged['backorder'] - self.df_merged['caa_lt'], 0)
+        self.df_merged['compra_sugerida'] = np.maximum(self.df_merged['caa'] - self.df_merged['sobrante'], 0)
+        self.df_merged['compra_sugerida'] = np.ceil(self.df_merged['compra_sugerida']).astype('Int64')
+        self.df_merged['compra_sugerida'] = self.df_merged['compra_sugerida'].astype("Float64")
+        self.df_merged['meses_proteccion'] = self.df_merged['meses_proteccion'].astype("Float64")
+        # mask = self.df_merged['demanda_mensual'] != 0
+        # self.df_merged.loc[mask, 'meses_proteccion'] = (
+        #     self.df_merged.loc[mask, 'meses_proteccion'] * 
+        #     (self.df_merged.loc[mask, 'compra_sugerida'].fillna(0) / self.df_merged.loc[mask, 'demanda_mensual'])
+        # ).astype("Float64")
+
+        # adding costo_compra and compras_recomendadas
+        self.df_merged = self.df_merged.rename(columns={'caa': 'compras_recomendadas'})
+        # self.df_merged = self.df_merged.rename(columns={'compra_sugerida': 'compras_recomendadas'})
+        self.df_merged.loc[self.df_merged['demanda_mensual'] < 0, 'demanda_mensual'] = 0
+        self.df_merged.loc[self.df_merged['compras_recomendadas'] < 0, 'compras_recomendadas'] = 0
+        self.df_merged['compras_recomendadas'] = self.df_merged['compras_recomendadas'].apply(
+            lambda x: math.ceil(x / 50) * 50 if pd.notna(x) else pd.NA
         )
-
-        df1_final_grouped_fs = df1_final_grouped.groupby(['fuente_suministro']).agg({
-            'ganancia_oportunidad': 'sum'
-        }).reset_index()
-
-        df1_final_grouped_fs = df1_final_grouped_fs.sort_values(
-            by='ganancia_oportunidad', 
-            ascending=False
-        ).reset_index(drop=True)
-        
-        df1_final_grouped_fs['hierarchy'] = df1_final_grouped_fs.index + 1
-
-        self.dffinal2 = self.dffinal2.merge(
-            df1_final_grouped_fs[['fuente_suministro', 'hierarchy']], 
-            how='left', 
-            on='fuente_suministro'
-        )
-
-        # self.dffinal2['venta_acumulada'] = self.dffinal2['demanda_mensual'] * self.dffinal2['monto_usd'] * self.dffinal2['lt_x']
-        # self.dffinal2['deficit'] = self.dffinal2['venta_acumulada'] - (self.dffinal2['stock'] + self.dffinal2['backorder']) * self.dffinal2['monto_usd']
-        # self.dffinal2['deficit'] = self.dffinal2['deficit'].apply(lambda x: max(x, 0))  # El déficit no puede ser negativo
-        # self.dffinal2['urgency'] = self.dffinal2['deficit'].rank(method='min', ascending=False).fillna(0).astype(int)
-
-        self.dffinal2.loc[self.dffinal2['demanda_mensual'] < 0, 'demanda_mensual'] = 0
-        self.dffinal2.loc[self.dffinal2['compras_recomendadas'] < 0, 'compras_recomendadas'] = 0
-        # self.dffinal2['demanda_mensual'] = self.dffinal2['demanda_mensual'].fillna(0) 
-        # self.dffinal2['compras_recomendadas'] = self.dffinal2['compras_recomendadas'].fillna(0) 
+        self.df_merged['costo_compra'] = self.df_merged['monto_usd'] * self.df_merged['compras_recomendadas']
 
         # Calcular riesgo
-        self.dffinal2['holgura'] = self.dffinal2['stock'] / self.dffinal2['demanda_mensual']
-        self.dffinal2['consumiendo_proteccion'] = (self.dffinal2['holgura'] < self.dffinal2['meses_proteccion']).astype(int)
-        self.dffinal2['quebro'] = (self.dffinal2['holgura'] <= 0).astype(int)
-        self.dffinal2['va_a_quebrar'] = ((self.dffinal2['stock'] + self.dffinal2['backorder']) < self.dffinal2['demanda_mensual']).astype(int)
-        self.dffinal2['verde'] = (
-            (self.dffinal2['quebro'] == 0) & 
-            (self.dffinal2['consumiendo_proteccion'] == 0) & 
-            (self.dffinal2['va_a_quebrar'] == 0)
-        ).astype(int)
-        self.dffinal2['amarillo'] = (
-            (self.dffinal2['consumiendo_proteccion'] == 1) & 
-            (self.dffinal2['quebro'] == 0)
-        ).astype(int)
-        self.dffinal2['rojo'] = (
-            (self.dffinal2['quebro'] == 1) |
-            (self.dffinal2['va_a_quebrar'] == 1) 
-            ).astype(int)
-        self.dffinal2['riesgo'] = self.dffinal2.apply(
-            lambda row: 'rojo' if row['rojo'] == 1 else 
-                        'amarillo' if row['amarillo'] == 1 else 
-                        'verde',
+        self.df_merged['holgura'] = (self.df_merged['stock'] / self.df_merged['demanda_mensual']).fillna(0)
+        self.df_merged['consumiendo_proteccion'] = (self.df_merged['holgura'] < self.df_merged['meses_proteccion']).astype('Int64')
+        self.df_merged['quebro'] = (self.df_merged['holgura'] <= 0).astype('Int64')
+        self.df_merged['va_a_quebrar'] = ((self.df_merged['stock'] + self.df_merged['backorder']) < self.df_merged['demanda_mensual']).astype('Int64')
+        self.df_merged['verde'] = (
+            (self.df_merged['quebro'] == 0) & 
+            (self.df_merged['consumiendo_proteccion'] == 0) & 
+            (self.df_merged['va_a_quebrar'] == 0)
+        ).astype('Int64')
+        self.df_merged['amarillo'] = (
+            (self.df_merged['consumiendo_proteccion'] == 1) & 
+            (self.df_merged['quebro'] == 0)
+        ).astype('Int64')
+        self.df_merged['rojo'] = (
+            (self.df_merged['quebro'] == 1) |
+            (self.df_merged['va_a_quebrar'] == 1) 
+        ).astype('Int64')
+        self.df_merged['riesgo'] = self.df_merged.apply(
+            lambda row: 'rojo' if pd.notna(row.get('rojo')) and row['rojo'] == 1 else 
+                        'amarillo' if pd.notna(row.get('amarillo')) and row['amarillo'] == 1 else 
+                        ('verde' if pd.notna(row.get('rojo')) or pd.notna(row.get('amarillo')) else np.nan),
             axis=1
         )
 
+        # modificar period2 (caa_lt)
+        self.df_merged['caa_lt'] += self.df_merged['corr_sd'] * self.df_merged['rfm'].map({3: 0.4, 2: 0.3, 1: 0.2, 0: 0.1}).fillna(0)
+
         # filtrar solo las importantes para la tabla por fuente de suministro
-        self.dffinal2['demanda_mensual_usd'] = self.dffinal2['demanda_mensual'] * self.dffinal2['monto_usd']
-        df_temp = self.dffinal2.copy()
-        df_temp = df_temp[(df_temp['rfm']==3) & (df_temp['riesgo']=='rojo')]
+        self.df_merged['demanda_mensual_usd'] = self.df_merged['demanda_mensual'] * self.df_merged['monto_usd']
+        df_temp = self.df_merged.copy()
+        df_temp = df_temp[(df_temp['rfm'] == 3) & (df_temp['riesgo'] == 'rojo')]
         df_temp = df_temp.groupby('fuente_suministro').agg(
             recomendacion=('costo_compra', 'sum'),
-            demanda_mensual_usd = ('demanda_mensual_usd','sum')
+            demanda_mensual_usd=('demanda_mensual_usd', 'sum')
         ).reset_index()
-        df_temp2 = self.dffinal2.groupby('fuente_suministro').agg(
-            lead_time=('lt_x', 'first'),
-            riesgo=('riesgo', lambda x: x.mode()[0] if not x.mode().empty else None), # moda
+        df_temp_2 = self.df_merged.groupby('fuente_suministro').agg(
+            lead_time=('lt', 'first'),
+            riesgo=('riesgo', lambda x: x.mode()[0] if not x.mode().empty else None)
         ).reset_index()
-        self.dffinal3 = df_temp2.merge(df_temp, how='left',on='fuente_suministro')
-        self.dffinal3['recomendacion'] = self.dffinal3['recomendacion'].fillna(0).astype(int)
-        self.dffinal3['demanda_mensual_usd'] = self.dffinal3['demanda_mensual_usd'].fillna(0).astype(int)
-        
-        # filtrar rfm = 3 para tabla de dashboard
-        # self.dfdashboard = self.dffinal2[self.dffinal2['rfm']==3]
-        
+        self.df_dashboard_by_fuente = df_temp_2.merge(df_temp, how='left', on='fuente_suministro')
+        self.df_dashboard_by_fuente['recomendacion'] = pd.to_numeric(self.df_dashboard_by_fuente['recomendacion'], errors='coerce').fillna(0).astype(int)
+        self.df_dashboard_by_fuente['demanda_mensual_usd'] = pd.to_numeric(self.df_dashboard_by_fuente['demanda_mensual_usd'], errors='coerce').fillna(0).astype(int)
+
+    def formatting(self) -> None:
         # dar formato
-        self.dffinal3['riesgo_color'] = self.dffinal3['riesgo'].map({
+        self.df_dashboard_by_fuente['riesgo_color'] = self.df_dashboard_by_fuente['riesgo'].map({
             'verde': '🟢',
             'amarillo': '🟡',
             #'naranja': '🟠',
             'rojo': '🔴'
         })
-        self.dffinal2 = self.dffinal2[[
-            'articulo','fuente_suministro','stock','compras_recomendadas','demanda_mensual','meses_proteccion',
-            'riesgo','lt_x','mean_margen','ultima_fecha','monto_usd',
-            'ultima_compra','costo_compra','rfm','backorder'
+        self.df_download = self.df_merged[[
+            'date','articulo','fuente_suministro','stock','compras_recomendadas','demanda_mensual',
+            'meses_proteccion','riesgo','lt','mean_margen','ultima_fecha','monto_usd',
+            'ultima_compra','costo_compra','rfm','backorder','holgura','quebro','va_a_quebrar','consumiendo_proteccion'
         ]]
-        self.dfdashboard = self.dffinal2[[
-            'articulo','fuente_suministro','stock','backorder','rfm','riesgo',
-            'monto_usd','ultima_compra','compras_recomendadas','costo_compra'
+        self.df_dashboard = self.df_merged[[
+            'date','articulo','fuente_suministro','stock','backorder','rfm','riesgo',
+            'demanda_mensual','monto_usd','ultima_compra','compras_recomendadas','costo_compra'
         ]]
-        self.dffinal3 = self.dffinal3[[
+        self.df_dashboard_by_fuente = self.df_dashboard_by_fuente[[
             'fuente_suministro',
             'lead_time',
             'recomendacion',
@@ -379,6 +287,7 @@ class DataProcessor:
         ]]
         # columns mapping
         display_columns = {
+            'date': 'Fecha',
             'articulo': 'Artículo',
             'fuente_suministro': 'Fuente Suministro',
             'stock': 'Inventario',
@@ -389,38 +298,29 @@ class DataProcessor:
             'monto_usd': 'Monto USD',
             'ultima_compra': 'Última Compra',
             'demanda_mensual': 'Demanda Mensual',
-            'lt_x': 'Lead Time',
+            'lt': 'Lead Time',
             'mean_margen': 'Margen',
             'meses_proteccion': 'Meses proteccion',
             'ultima_fecha': 'Ultima fecha',
             'costo_compra': 'Recomendacion USD'
             }
         display_columns_fuente = {
+            'date': 'Fecha',
             'fuente_suministro': 'Fuente de Suministro',
             'lead_time': 'Lead Time',
             'recomendacion': 'Recomendacion USD',
-            'demanda_mensual_usd': 'Demanda Mensual USD',
-            'mean_margen': 'Margen Promedio'
+            'demanda_mensual_usd': 'Demanda Mensual USD'
         }
-        
-        self.dfdashboard = self.dfdashboard.rename(columns=display_columns)
-        self.dffinal2 = self.dffinal2.rename(columns=display_columns)
-        self.dffinal3 = self.dffinal3.rename(columns=display_columns_fuente)
-
+        self.df_dashboard = self.df_dashboard.rename(columns=display_columns)
+        self.df_download = self.df_download.rename(columns=display_columns)
+        self.df_dashboard_by_fuente = self.df_dashboard_by_fuente.rename(columns=display_columns_fuente)
+       
     def process_all(self) -> None:
-        self.load_data()
-        self.preprocess_exchange_rates()
-        self.get_currency_data()
-        self.process_currency_data()
-        self.merge_exchange_rates()
-        self.process_inventory()
+        self.load_and_process_data()
+        self.processing_price_usd()
         self.merge_dataframes()
-        self.process_prices()
-        self.calculate_margin()
-        self.create_df1_final()
-        self.create_final_dataframe()
-        self.add_compra_real()
-        self.finalize_processing()
+        self.adding_final_variables()
+        self.formatting()
 
 if __name__ == "__main__":
     from pathlib import Path
@@ -430,12 +330,14 @@ if __name__ == "__main__":
     # Inicializar el procesador
     processor = DataProcessor(base_path)
     processor.process_all()
-    
+
     # Definir rutas para guardar los archivos
     cleaned_path = base_path / 'data' / 'cleaned'
     cleaned_path.mkdir(parents=True, exist_ok=True)  # Crear el directorio si no existe
     
     # Guardar los DataFrames
-    processor.dfdashboard.to_csv(cleaned_path / 'dashboard.csv', index=False)
-    processor.dffinal3.to_csv(cleaned_path / 'dashboard_by_fuente.csv', index=False)
-    processor.dffinal2.to_csv(cleaned_path / 'download.csv', index=False)
+    print(len(processor.df_download['Artículo'].unique()))
+    processor.df_dashboard.to_csv(cleaned_path / 'dashboard.csv', index=False)
+    processor.df_dashboard_by_fuente.to_csv(cleaned_path / 'dashboard_by_fuente.csv', index=False)
+    processor.df_download.to_csv(cleaned_path / 'download.csv', index=False)
+

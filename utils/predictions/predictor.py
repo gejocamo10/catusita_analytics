@@ -130,8 +130,8 @@ class Predictor:
                         if lookback else val_data.iloc[:-val_size])
             test_data = val_data.iloc[-val_size:]
             
-            if len(train_data) < 2:
-                continue
+            # if len(train_data) < 2:
+            #     continue
                 
             y_train = train_data['cantidad']
             y_test = test_data['cantidad']
@@ -257,6 +257,7 @@ class Predictor:
                     })
                     print(f"SKU {sku} no pudo ser evaluado. Datos insuficientes o problema en los datos.")
                     no_sku_process_list.append({'sku':sku})
+                    pd.DataFrame(no_sku_process_list,columns=['sku']).to_csv('data/cleaned/no_sku_process_list.csv')
                     count = count + 1
                     continue
 
@@ -302,7 +303,7 @@ class Predictor:
                 period1 = sum(future_predictions[:lt])
                 period2 = sum(future_predictions[lt:2*lt])
 
-                period2 += 0.4 * pred_std
+                # period2 += 0.4 * pred_std
 
                 last_six_months_mean = sku_data.tail(6)['cantidad'].mean()
 

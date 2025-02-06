@@ -1,8 +1,7 @@
 Fuente de Suministro,Lead Time,Recomendacion USD,Demanda Mensual USD
-0,4,0,0
 affinia nakata - brasil,4,0,0
 affinia urba - brasil,4,0,0
-aisin - japon,6,261860,42815
+aisin - japon,6,173150,28414
 baldwin filters,4,0,0
 birene - cigueñales-culatas-ejes de levas,4,0,0
 boto tyres,4,0,0
@@ -16,9 +15,9 @@ corteco - brasil,4,0,0
 crc - limpia carburador,4,0,0
 ctr,4,0,0
 daewha - korea,4,0,0
-deestone,6,45698,6340
+deestone,6,1829,9
 delphi - cav - brasil,4,0,0
-denso - bujias - japon,3,1624,536
+denso - bujias - japon,3,0,0
 denso - elementos - valvulas,4,0,0
 deruibo,4,0,0
 donaldson,4,0,0
@@ -36,17 +35,17 @@ glyco - alemania,4,0,0
 gmb - bombas de agua,4,0,0
 goetze,4,0,0
 indeco - cables,4,0,0
-ishikawa - discos de freno,6,9687,1565
+ishikawa - discos de freno,6,1827,253
 ishikawa - pastillas de freno,6,0,0
 ishikawa - zapatas de freno,6,0,0
-ito koyama - amortiguadores,6,185912,28182
-ito koyama - bocamazas,6,10264,1536
+ito koyama - amortiguadores,6,146364,22069
+ito koyama - bocamazas,6,1375,137
 ito koyama - cremalleras,6,0,0
-ito koyama - direccion,6,2115,342
-ito koyama - palieres,6,80740,12408
-ito koyama - resortes,6,104645,15891
+ito koyama - direccion,6,0,0
+ito koyama - palieres,6,20615,3044
+ito koyama - resortes,6,70893,10623
 ito koyama - torretas,6,0,0
-ito koyama - trapecios,6,1158,149
+ito koyama - trapecios,6,0,0
 ito koyama - tricetas,0,0,0
 kamura,4,0,0
 kawe - embragues,4,0,0
@@ -55,14 +54,14 @@ ks - brasil,4,0,0
 laso,4,0,0
 lemforder - brasil,4,0,0
 mahle - brasil,4,0,0
-mann - brasil,4,26015,6160
+mann - brasil,4,0,0
 marilia,4,0,0
 mirage,4,0,0
 monark - alemania,4,0,0
 moog - usa,3,0,0
 mrk - japon,4,0,0
 nachi - koyo - ntn - nsk - japon,4,0,0
-narva,4,1272,316
+narva,4,0,0
 nas - chumaceras,4,0,0
 nas - pfi - zkl - mba,4,0,0
 novaquimica - peru,1,0,0
@@ -71,7 +70,7 @@ owrun - aros de rueda,4,0,0
 philips,4,0,0
 plumillas - sakura,6,0,0
 precision - usa,4,0,0
-prestone - mexico,3,28635,9442
+prestone - mexico,3,0,0
 prestone - usa,3,0,0
 prextoline - grasas,2,0,0
 prextoline - lubricantes,2,0,0
@@ -80,12 +79,12 @@ rover - usa,4,0,0
 sabo- brasil,4,0,0
 sachs - argentina,4,0,0
 sachs - brasil,4,0,0
-sakura - radiadores,6,2467,378
-sakura filter,6,200062,32396
+sakura - radiadores,6,0,0
+sakura filter,6,67889,10741
 sankei - japon,4,0,0
 sealco - usa,3,0,0
 sealed power - usa,4,0,0
-seco - embragues,4,5660,1379
+seco - embragues,4,0,0
 sin definicion,0,0,0
 skf - rodajes,4,0,0
 spaco - italia,4,0,0
@@ -94,7 +93,7 @@ timken - rodajes,4,0,0
 tkl - taiwan,4,0,0
 toyo - japon,4,0,0
 trw - brasil,4,0,0
-valvoline,2,10659,4801
+valvoline,2,1678,805
 valvoline - usa,3,0,0
 varga,4,0,0
 vdo - brasil,4,0,0

@@ -17,7 +17,7 @@ from utils.rfm.rfm_processor import process_rfm
 
 
 # Configuration
-st.set_page_config(layout="wide", page_title="Procesador de Datos")
+st.set_page_config(layout="wide", page_title="Catusita Analytics")
 
 # Constants
 CATUSITA_FILES = {
@@ -194,8 +194,8 @@ def load_dates_dashboard():
     df_ventas['fecha'] = pd.to_datetime(df_ventas['fecha'], errors='coerce')
     fecha_ventas = max(df_ventas['fecha'])
 
-    df_inventario = pd.read_excel("data/raw/catusita/inventory.xlsx")
-    df_inventario['FECHA AL'] = pd.to_datetime(df_inventario['FECHA AL'], format='%d/%m/%Y')
+    df_inventario = pd.read_excel("data/raw/catusita/inventory.xlsx", dtype={'FECHA AL': str})
+    df_inventario['FECHA AL'] = pd.to_datetime(df_inventario['FECHA AL'], format='%Y%m%d')
     fecha_inventarios = max(df_inventario['FECHA AL'])
 
     df_saldo = pd.read_excel("data/raw/catusita/saldo de todo 04.11.2024.2.xls", header=None)
@@ -205,7 +205,7 @@ def load_dates_dashboard():
     else:
         fecha = pd.to_datetime(valor_celda)
     fecha_saldos = fecha
-    
+
     fecha_ventas = fecha_ventas.strftime('%Y-%m-%d')
     fecha_inventarios = fecha_inventarios.strftime('%Y-%m-%d')
     fecha_saldos = fecha_saldos.strftime('%Y-%m-%d')
@@ -245,19 +245,19 @@ def main_processor(calculator=0, date_filter=None):
             base_path = str(DATA_PATHS['cleaned'].parent.parent)
             processor = DataProcessor(base_path)
             processor.process_all()
-            if processor.dfdashboard is not None:
-                processor.dfdashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
-                print(f"Generated dashboard data for {len(processor.dfdashboard)} SKUs")
+            if processor.df_dashboard is not None:
+                processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
+                print(f"Generated dashboard data for {len(processor.df_dashboard)} SKUs")
             else:
                 print("Warning: No dashboard data generated")
-            if processor.dffinal3 is not None:
-                processor.dffinal3.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
-                print(f"Generated dashboard data by fuente for {len(processor.dffinal3)} fuentes")
+            if processor.df_dashboard_by_fuente is not None:
+                processor.df_dashboard_by_fuente.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
+                print(f"Generated dashboard data by fuente for {len(processor.df_dashboard_by_fuente)} fuentes")
             else:
                 print("Warning: No dashboard data by fuente generated")
-            if processor.dffinal2 is not None:
-                processor.dffinal2.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
-                print(f"Generated download data for {len(processor.dffinal2)} SKUs")
+            if processor.df_download is not None:
+                processor.df_download.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
+                print(f"Generated download data for {len(processor.df_download)} SKUs")
             else:
                 print("Warning: No download data generated")           
         except Exception as e:
@@ -270,66 +270,10 @@ def main():
     st.title("Dashboard Catusita")
     
     # Create tabs
-    tab1, tab2, tab3 = st.tabs(["Carga de Archivos", "Predicciones", "Recomendación De Compras"])
+    tab1, tab2, = st.tabs(["Predicciones", "Recomendación De Compras"])
 
-    # Tab 1: File Uploads
+    # Tab 1: Predictions
     with tab1:
-        # Create three columns for file uploads
-        col1, col2, col3 = st.columns(3)
-
-        # Column 1: Catusita Files
-        with col1:
-            st.header("Archivos Catusita")
-            for category, filename in CATUSITA_FILES.items():
-                st.subheader(f"{category.title()}")
-                uploaded_file = st.file_uploader(
-                    f"Seleccionar archivo para {filename}",
-                    key=f"catusita_{category}",
-                    type=['xlsx']
-                )
-                if uploaded_file:
-                    success, message = process_file_upload(uploaded_file, 'catusita', category)
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-
-        # Column 2: SUNARP Files
-        with col2:
-            st.header("Archivos SUNARP")
-            for category in SUNARP_CATEGORIES.keys():
-                st.subheader(f"Vehículos {category}")
-                uploaded_file = st.file_uploader(
-                    f"Seleccionar archivo para {category}",
-                    key=f"sunarp_{category}",
-                    type=['xlsx']
-                )
-                if uploaded_file:
-                    success, message = process_file_upload(uploaded_file, 'sunarp')
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-
-        # Column 3: SUNAT Files
-        with col3:
-            st.header("Archivos SUNAT")
-            sunat_files = st.file_uploader(
-                "Seleccionar archivos SUNAT",
-                accept_multiple_files=True,
-                key="sunat",
-                type=['xlsx']
-            )
-            if sunat_files:
-                for file in sunat_files:
-                    success, message = process_file_upload(file, 'sunat')
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-    
-    # Tab 2: Predictions
-    with tab2:
         st.header("Procesamiento de Predicciones")
         
         # Month and Year selection
@@ -361,8 +305,30 @@ def main():
             if df_catusita is not None:
                 print(f"Catusita data shape: {df_catusita.shape}")
 
-    with tab3:
-        st.markdown("### Resultados de Prediccion")
+    with tab2:
+        st.markdown("### Recomendacion de compra")
+
+        st.markdown(
+            """
+            Bienvenido, este es un dashboard para recomendación de compras **por fuente de suministro**. 
+            Antes de iniciar debes cargar el **backorder** actual de la fuente (las fuentes) de suministro que deseas analizar.
+            """
+        )
+        
+        if st.button("Cargar Backorder"):
+            st.success("Se ha cargado data correspondiente al backorder de las siguientes fuentes de suministro: Xxx Xxx Xxx")
+        
+        st.markdown(
+            """
+            A continuación mostraremos las recomendaciones de compra para estas fuentes de suministro. 
+            La información utilizada para realizar estas recomendaciones ha sido **actualizada** en las siguientes fechas:
+            """
+        )    
+
+        fecha_ventas, fecha_inventarios, fecha_saldos = load_dates_dashboard()
+        st.write(f"📅 **Último registro de ventas:** {fecha_ventas}")
+        st.write(f"📅 **Último registro de inventarios:** {fecha_inventarios}")
+        st.write(f"📅 **Último registro de saldos:** {fecha_saldos}")    
         
         try:
             # Carga de datos
@@ -374,12 +340,6 @@ def main():
             dashboard_df = pd.read_csv(dashboard_path)
             dashboard_df_by_fuente = pd.read_csv(dashboard_path_by_fuente)
             download_df = pd.read_csv(download_path)
-
-            # Apply filters
-            # if filtro_fuente != 'todos':
-            #     dashboard_df = dashboard_df[dashboard_df['fuente_suministro'] == filtro_fuente]
-            # if filtro_articulo != 'todos':
-            #     dashboard_df = dashboard_df[dashboard_df['articulo'] == filtro_articulo]
             
             # Metrics
             col1, col2, col3 = st.columns(3)
@@ -390,55 +350,7 @@ def main():
             with col3:
                 st.metric("xxx", f"0")
 
-            
-            # Modified highlight function using new column names
-            def highlight_risk(row):
-                color_map = {
-                    'verde': '#b7f898',
-                    'amarillo': '#f6f69b',
-                    # 'naranja': '#f8dc98',
-                    'rojo': '#f69e9b'
-                }
-                
-                risk_value = row['Alerta']
-                color = color_map.get(risk_value, '')
-                
-                return ['background-color: ' + color if color else ''] * len(row)
-            
-            def highlight_risk_fuente(row):
-                color_map = {
-                    'verde': '#b7f898',
-                    'amarillo': '#f6f69b',
-                    # 'naranja': '#f8dc98',
-                    'rojo': '#f69e9b'
-                }
-                
-                risk_value = row['Alerta']
-                color = color_map.get(risk_value, '')
-                
-                return ['background-color: ' + color if color else ''] * len(row)
-
-            styled_df_fuente = dashboard_df_by_fuente.style.format({
-                'Lead Times': '{:,.0f}',
-                'Recomendacion USD': '{:,.0f}',
-                'Margen Promedio': '{:,.0%}' 
-            }).apply(highlight_risk_fuente, axis=1)
-
-
-            # dashboard_df_by_fuente['Recomendacion USD'] = pd.to_numeric(dashboard_df_by_fuente['Recomendacion USD'], errors='coerce')
-            # dashboard_df_by_fuente['Demanda Mensual USD'] = pd.to_numeric(dashboard_df_by_fuente['Demanda Mensual USD'], errors='coerce')
-
             gb = GridOptionsBuilder.from_dataframe(dashboard_df_by_fuente)
-            # gb.configure_column(
-            #     "Recomendacion USD",
-            #     type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
-            #     valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : ''; }"
-            # )
-            # gb.configure_column(
-            #     "Demanda Mensual USD",
-            #     type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
-            #     valueFormatter="function(params) { return params.value ? Number(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : ''; }"
-            # )
             gb.configure_selection('single', use_checkbox=True)
             grid_options_fuente = gb.build()
             response = AgGrid(
@@ -456,13 +368,25 @@ def main():
                 st.write(f"Fuente seleccionada: {fuente_seleccionada}")
                 dashboard_df = dashboard_df[dashboard_df['Fuente Suministro'] == fuente_seleccionada].reset_index(drop=True)
                 # Apply styling with new column names
+                # Modified highlight function using new column names
+                def highlight_risk(row):
+                    color_map = {
+                        'verde': '#b7f898',
+                        'amarillo': '#f6f69b',
+                        # 'naranja': '#f8dc98',
+                        'rojo': '#f69e9b'
+                    }
+                    risk_value = row['Alerta']
+                    color = color_map.get(risk_value, '')
+                    return ['background-color: ' + color if color else ''] * len(row)
                 styled_df = dashboard_df.style.format({
                     'Inventario': '{:,.0f}',
                     'Compras Recomendadas': '{:,.0f}',
                     'Monto USD': '{:,.2f}',
                     'Última Compra': '{:,.0f}',
                     'Backorder': '{:,.0f}',
-                    'Recomendacion USD': '{:,.0F}'
+                    'Recomendacion USD': '{:,.0F}',
+                    'Demanda Mensual': '{:,.0f}'
                 }).apply(highlight_risk, axis=1)
                 st.write(styled_df)
             else:
@@ -475,8 +399,8 @@ def main():
                 data=csv,
                 file_name="dashboard_filtered.csv",
                 mime="text/csv"
-            )
-            
+            )  
+
             # Leyenda de colores para la variable Alerta con emojis
             st.markdown("### Leyenda de Alerta")
             st.markdown(
@@ -493,11 +417,6 @@ def main():
                 """,
                 unsafe_allow_html=True
             )
-
-            fecha_ventas, fecha_inventarios, fecha_saldos = load_dates_dashboard()
-            st.write(f"📅 **Último registro de ventas:** {fecha_ventas}")
-            st.write(f"📅 **Último registro de inventarios:** {fecha_inventarios}")
-            st.write(f"📅 **Último registro de saldos:** {fecha_saldos}")
 
         except Exception as e:
             st.error(f"Error al cargar o procesar los datos del dashboard: {str(e)}")
