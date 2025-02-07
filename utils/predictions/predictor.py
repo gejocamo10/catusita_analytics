@@ -257,7 +257,7 @@ class Predictor:
                     })
                     print(f"SKU {sku} no pudo ser evaluado. Datos insuficientes o problema en los datos.")
                     no_sku_process_list.append({'sku':sku})
-                    pd.DataFrame(no_sku_process_list,columns=['sku']).to_csv('data/cleaned/no_sku_process_list.csv')
+                    # pd.DataFrame(no_sku_process_list,columns=['sku']).to_csv('data/cleaned/no_sku_process_list.csv')
                     count = count + 1
                     continue
 
