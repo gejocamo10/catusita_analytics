@@ -122,7 +122,8 @@ class Predictor:
         if len(data) < 4:
             return None, None, float('inf')
             
-        val_data = data[data['year'] == val_year] if val_year else data
+        # val_data = data[data['year'] == val_year] if val_year else data
+        val_data = data
         val_size = 6
         
         for lookback in lookback_periods:
