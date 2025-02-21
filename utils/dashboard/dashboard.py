@@ -62,7 +62,7 @@ class DataProcessor:
         ).reset_index().sort_values(by='total_venta_pen', ascending=False)
         # agregar por fecha_mensual, articulo, fuente_suministro 
         self.df_products = self.df_products.groupby(['fecha_mensual', 'articulo', 'fuente_suministro']).agg({
-            'codigo': 'first', 
+            # 'codigo': 'first', 
             'cantidad': 'sum',
             'transacciones': 'sum',
             'venta_pen': 'sum', 
