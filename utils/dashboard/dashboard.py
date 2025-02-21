@@ -63,6 +63,7 @@ class DataProcessor:
         # agregar por fecha_mensual, articulo, fuente_suministro 
         self.df_products = self.df_products.groupby(['fecha_mensual', 'articulo', 'fuente_suministro']).agg({
             # 'codigo': 'first', 
+            'descripcion': 'first',
             'cantidad': 'sum',
             'transacciones': 'sum',
             'venta_pen': 'sum', 

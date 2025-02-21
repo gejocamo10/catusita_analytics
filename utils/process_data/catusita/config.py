@@ -21,7 +21,7 @@ COLUMNS_TO_KEEP = [
 COLUMN_RENAME_MAPPING = {
     "dateDocument": "fecha",
     "codeArticle": "articulo",
-    "nameArticle": "nombre",
+    "nameArticle": "descripcion",
     "nameSupply": "fuente_suministro",
     "quantity": "cantidad",
     "amountSOL": "venta_pen",

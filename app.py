@@ -139,7 +139,9 @@ def process_data(date_filter=None):
     df_sunat.to_csv(DATA_PATHS['process'] / 'sunat_consolidated.csv', index=False)
     
     print("Processing Catusita data...")
-    catusita_processor = CatusitaProcessor()
+    start_date = "20160101"
+    end_date = date_filter.strftime("%Y%m%d")
+    catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
     if date_filter:
         df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
