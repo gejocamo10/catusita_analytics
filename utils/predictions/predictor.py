@@ -183,16 +183,18 @@ class Predictor:
                             best_model_name, lookback, num_months):
         predictions = []
         current_data = data.copy()
-        
+        current_data = current_data.sort_values(by="fecha")
+
         for _ in range(num_months):
             if best_model_name in ['xgboost', 'linear']:
                 pred = best_model.predict(current_data[feature_columns].iloc[-1:])[0]
             elif best_model_name in ['mean', 'median']:
-                pred = best_model
+                last_6_months = current_data.iloc[-6:]  # Tomar solo los últimos 6 meses
+                pred = last_6_months['cantidad'].mean() if best_model_name == 'mean' else last_6_months['cantidad'].median()
             else:  # ES
                 forecast_func, alpha = best_model
                 lookback_data = (current_data.iloc[-lookback:] if lookback 
-                               else current_data)
+                                else current_data)
                 pred = forecast_func(lookback_data['cantidad'].dropna(), alpha)
             
             predictions.append(pred)
@@ -208,7 +210,7 @@ class Predictor:
             if feature_columns:
                 for lag in range(1, 4):
                     current_data[f'cantidad_lag_{lag}'] = current_data['cantidad'].shift(lag)
-            
+        
         return predictions
 
     def make_final_predictions(self, all_monthly_data, df_cov, df_correlaciones_sig):

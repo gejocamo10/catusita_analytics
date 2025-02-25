@@ -1,8 +1,7 @@
 import os
 import pandas as pd
-import requests
 from utils.process_data.catusita.config import (
-    COLUMN_RENAME_MAPPING, KITS_RENAME_MAPPING, 
+    PATHS, COLUMN_RENAME_MAPPING, KITS_RENAME_MAPPING, 
     FILTER_COLUMNS, COLUMNS_TO_KEEP, FILTER_DATE
 )
 from utils.process_data.config import DATA_PATHS
@@ -10,54 +9,62 @@ from utils.process_data.catusita.utils import (
     format_column_names, clean_string_columns, clean_article_names
 )
 
+import requests
+
 class CatusitaProcessor:
     def __init__(self, start_date, end_date):
+        self.base_path = DATA_PATHS['raw_catusita']
         self.start_date = start_date
         self.end_date = end_date
         self.api_url = "http://api.catusita.com:8083/api/sales/forDate"
         # http://api.catusita.com:8083/api/sales/forDate?Date1=20250101&Date2=20250115
 
+    def _get_full_path(self, relative_path):
+        """Helper method to construct full path from base path and relative path"""
+        return os.path.join(self.base_path, relative_path.lstrip('/'))
+    
     def fetch_data_from_api(self):
         """Obtiene datos desde la API y los convierte en un DataFrame."""
         params = {"Date1": self.start_date, "Date2": self.end_date}
-        headers = {"Accept": "application/json"}
+        response = requests.get(self.api_url, params=params)
 
-        try:
-            response = requests.get(self.api_url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
+        if response.status_code == 200:
             data = response.json().get("data", [])
             return pd.DataFrame(data)
-        except requests.exceptions.RequestException as e:
-            print(f"Error al conectar con la API: {e}")
+        else:
+            print(f"Error en la solicitud: {response.status_code}")
             return pd.DataFrame()
 
     def read_main_data(self):
         """Obtiene los datos desde la API y los estructura en un DataFrame compatible."""
         df_catusita = self.fetch_data_from_api()
-        
+        df_catusita = df_catusita.rename(columns={
+            'dateDocument':'fecha', 
+            'codeArticle': 'articulo', 
+            'nameArticle': 'nombre', 
+            'nameSupply': 'fuente_suministro', 
+            'quantity': 'cantidad', 
+            'amountSOL': 'venta_pen', 
+            'amountUSD': 'venta_usd',
+            'cost': 'costo'
+        })
+        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha']).dt.date
+
         if df_catusita.empty:
             print("No se obtuvieron datos desde la API.")
-            return df_catusita
-        
-        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'], format='%Y-%m-%d')
-        df_catusita['transacciones'] = 1
-        
-        df_catusita = df_catusita.drop(columns=['document', 'codeSupply'], errors='ignore')
-        
-        df_catusita = format_column_names(df_catusita).rename(columns=COLUMN_RENAME_MAPPING)
-        df_catusita = clean_article_names(df_catusita)
-        df_catusita = clean_string_columns(df_catusita)
-        
-        df_catusita = df_catusita[(df_catusita[FILTER_COLUMNS] >= 0).all(axis=1)]
-        df_catusita.drop_duplicates(inplace=True)
-        
-        df_catusita = df_catusita[df_catusita['fecha'].dt.weekday != 6]
         
         return df_catusita
+
+    def read_lt_data(self):
+        """Read lead time data"""
+        file_path_lt = self._get_full_path(PATHS['lt'])
+        df_lt = pd.read_csv(file_path_lt)
+        df_lt = df_lt.rename(columns={"fuente_de_suministro": "fuente_suministro"})
+        return df_lt
     
     def process_kits_and_blacklist(self, df):
         """Process kits and blacklist filtering"""
-        kits_file_path = DATA_PATHS['kits_file']
+        kits_file_path = self._get_full_path(PATHS['kits_file'])
         df_kits = pd.read_excel(kits_file_path)
         df_kits = df_kits.rename(columns={
             "Código KIT (Sin historial)": "articulo_madre",
@@ -66,7 +73,7 @@ class CatusitaProcessor:
             "Código 3": "articulo_3"
         })
 
-        blacklist_file_path = DATA_PATHS['blacklist_file']
+        blacklist_file_path = self._get_full_path(PATHS['blacklist_file'])
         df_blacklist = pd.read_excel(blacklist_file_path)
         df_blacklist = df_blacklist.rename(columns={'codigo': 'articulo'})
 
@@ -97,15 +104,29 @@ class CatusitaProcessor:
         df_final['articulo'] = df_final['articulo'].str.lower()
 
         return df_final
-    
+        
     def process_data(self):
         """Realiza el procesamiento completo de los datos."""
         df_catusita = self.read_main_data()
-        if df_catusita.empty:
-            return df_catusita
-        
+        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'], format='%Y-%m-%d')
+        df_catusita = format_column_names(df_catusita).rename(columns=COLUMN_RENAME_MAPPING)
+     
+        df_catusita['transacciones'] = 1
+     
+        df_catusita.dropna(how='all', inplace=True)
+        df_catusita = clean_article_names(df_catusita)
+        df_catusita = clean_string_columns(df_catusita)
+     
+        df_catusita = df_catusita[(df_catusita[FILTER_COLUMNS] >= 0).all(axis=1)]
+        df_catusita.drop_duplicates(inplace=True)
+        df_catusita = df_catusita[df_catusita['fecha'].dt.weekday != 6]
+     
         df_catusita = self.process_kits_and_blacklist(df_catusita)
         df_catusita = df_catusita[COLUMNS_TO_KEEP]
+        
+        df_lt = self.read_lt_data()
+        df_catusita = pd.merge(df_catusita, df_lt[["fuente_suministro", "LT_meses"]], on="fuente_suministro", how="left")
+        df_catusita = df_catusita.rename(columns={"LT_meses": "lt"})
         
         return df_catusita
 
@@ -113,5 +134,5 @@ class CatusitaProcessor:
         """Guarda los datos procesados en un archivo CSV."""
         output_path = DATA_PATHS['process']
         output_file = os.path.join(output_path, 'catusita_consolidated.csv')
+        df['fecha'] = pd.to_datetime(df['fecha'], format='%Y-%m-%d')
         df.to_csv(output_file, index=False)
-        print(f"✅ Datos guardados en {output_file}")

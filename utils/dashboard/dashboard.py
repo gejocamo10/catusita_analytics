@@ -1,53 +1,74 @@
 import pandas as pd
 import numpy as np
+import requests
 import yfinance as yf
 import math
+from datetime import datetime, timedelta
 from typing import Tuple, Optional
 
 class DataProcessor:
-    def __init__(self, path: str):
+    def __init__(self, path: str, date_filter: str):
         self.path = path
-        self.df_predictions = None # results_models_comparison
+        self.date_filter = date_filter
+        self.df_predictions = None 
         self.df_inventory = None
         self.df_rfm = None
-        self.df_tc = None # tipo_de_cambio_df
+        self.df_tc = None 
         self.df_products = None
-        self.df_backorder = None # back_order
-        self.df_closing_prices = None # closing_prices
-        self.df_long_format = None # long_format
-        self.df_tc_final = None # merged_df_tc_final
+        self.df_backorder = None 
+        self.df_closing_prices = None 
+        self.df_long_format = None 
+        self.df_tc_final = None 
         self.df_merged = None
-        # self.df_precio_result = None # result_precio
-        self.df_margin_result = None # margin_result
-        self.df_download = None # dffinal2
-        self.df_dashboard_by_fuente = None # dffinal3
+        self.df_margin_result = None 
+        self.df_download = None 
+        self.df_dashboard_by_fuente = None 
         self.df_dashboard = None
 
-
+    def fetch_data_from_api(self, url: str, params: dict = None) -> pd.DataFrame:
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json().get("data", [])
+            return pd.DataFrame(data)
+        except requests.exceptions.RequestException as e:
+            print(f"Error al conectar con la API {url}: {e}")
+            return pd.DataFrame()
+        
     def load_and_process_data(self) -> None:
         self.df_predictions = pd.read_csv(f"{self.path}/data/cleaned/predictions.csv")
-        self.df_inventory = pd.read_excel(f"{self.path}/data/raw/catusita/inventory.xlsx")
         self.df_rfm = pd.read_csv(f"{self.path}/data/process/df_rfm.csv")
-        self.df_tc = pd.read_excel(f"{self.path}/data/raw/catusita/saldo de todo 04.11.2024.2.xls", skiprows=2)
         self.df_products = pd.read_csv(f"{self.path}/data/process/catusita_consolidated.csv")
         try:
             self.df_backorder = pd.read_excel(f"{self.path}/data/raw/catusita/backorder12_12.xlsx")
         except FileNotFoundError:
             self.df_backorder = pd.DataFrame()
+        prev_day = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+        self.df_inventory = self.fetch_data_from_api("http://api.catusita.com:8083/api/stock/forDate", {"DateStock": prev_day})
+        self.df_tc = self.fetch_data_from_api("http://api.catusita.com:8083/api/article/data")
+
 
         ### to_datime
-        self.df_tc['Ult. Fecha'] = pd.to_datetime(self.df_tc['Ult. Fecha'], errors='coerce')
         self.df_products['fecha'] = pd.to_datetime(self.df_products['fecha'])
         self.df_predictions['date'] = pd.to_datetime(self.df_predictions['date'])
-        self.df_inventory['FECHA AL'] = pd.to_datetime(self.df_inventory['FECHA AL'], format='%Y%m%d')
+
+        self.df_tc = self.df_tc[self.df_tc["lastDateBuy"] != "0001-01-01T00:00:00"]
+        self.df_tc["lastDateBuy"] = pd.to_datetime(self.df_tc["lastDateBuy"], format="%Y-%m-%dT%H:%M:%S", errors="coerce")
+        self.df_tc = self.df_tc[(self.df_tc["lastDateBuy"] >= "1900-01-01") & (self.df_tc["lastDateBuy"] <= "2030-12-31")]
         
         ### processing data for raw tables
         ## df_tc
-        self.df_tc = self.df_tc[['Código','Mnd','Fob','Ult. Fecha','Ult. Compra']]
-        self.df_tc.columns = ['codigo', 'moneda', 'monto', 'ultima_fecha', 'ultima_compra']
-        self.df_tc['codigo'] = self.df_tc['codigo'].astype(str)
+        self.df_tc['codeArticle'] = self.df_tc['codeArticle'].astype(str)
+        self.df_tc['codeArticle'] = self.df_tc['codeArticle'].str.lower()
+        self.df_tc.to_csv('articulos.csv')
+        self.df_tc = self.df_tc.rename(columns={
+            'codeArticle':'codigo',
+            'lastCurrencyBuy':'moneda',
+            'lastPriceBuy':'monto',
+            'lastDateBuy':'ultima_fecha',
+            'lastQuantityBuy':'ultima_compra'
+            })
         self.df_tc = self.df_tc.dropna(subset=['ultima_fecha'])
-        self.df_tc['codigo'] = self.df_tc['codigo'].str.lower()
         self.df_tc = self.df_tc[self.df_tc['ultima_fecha'].notna()]
         
         ## df_product
@@ -62,8 +83,7 @@ class DataProcessor:
         ).reset_index().sort_values(by='total_venta_pen', ascending=False)
         # agregar por fecha_mensual, articulo, fuente_suministro 
         self.df_products = self.df_products.groupby(['fecha_mensual', 'articulo', 'fuente_suministro']).agg({
-            # 'codigo': 'first', 
-            'descripcion': 'first',
+            # 'descripcion': 'first',
             'cantidad': 'sum',
             'transacciones': 'sum',
             'venta_pen': 'sum', 
@@ -76,9 +96,13 @@ class DataProcessor:
         self.df_predictions = self.df_predictions.rename(columns={'sku': 'articulo'})
 
         ## df_inventory
-        self.df_inventory.columns = ['cia', 'date', 'codigo', 'descripcion', 'um', 'stock']
+        self.df_inventory = self.df_inventory.rename(columns={
+            "codeArticle": "codigo",
+            "umArticle": "um",
+            "stock": "stock"
+        })
         self.df_inventory.loc[:, 'codigo'] = self.df_inventory['codigo'].str.lower()
-        self.df_inventory = self.df_inventory.groupby(['date','codigo','descripcion','um']).agg(
+        self.df_inventory = self.df_inventory.groupby(['codigo','um']).agg(
             {
                 'stock':'sum'
             }
@@ -129,12 +153,12 @@ class DataProcessor:
 
     def merge_dataframes(self) -> None:
         # cleaning df_inventory with df_products
-        max_date = self.df_inventory['date'].max()
-        self.df_inventory = self.df_inventory[
-            (self.df_inventory['date'] != 'Periodo') & 
-            (self.df_inventory['date'].notna())&
-            (self.df_inventory['date']==max_date)
-        ]
+        # max_date = self.df_inventory['date'].max()
+        # self.df_inventory = self.df_inventory[
+        #     (self.df_inventory['date'] != 'Periodo') & 
+        #     (self.df_inventory['date'].notna())&
+        #     (self.df_inventory['date']==max_date)
+        # ]
         df_inventory_final=pd.concat(
             [
                 pd.DataFrame(self.df_inventory['codigo'].unique(), columns=['codigo']),
@@ -143,12 +167,13 @@ class DataProcessor:
             ignore_index=True
         ).drop_duplicates()
         self.df_inventory = df_inventory_final.merge(
-            self.df_inventory[['date','codigo','stock']].drop_duplicates(),
+        #    self.df_inventory[['date','codigo','stock']].drop_duplicates(),
+            self.df_inventory[['codigo','stock']].drop_duplicates(),
             how='left',
             on='codigo'
         )
         self.df_inventory['stock']=self.df_inventory['stock'].fillna(0)
-        self.df_inventory['date'] = self.df_inventory['date'].fillna(max_date)
+        # self.df_inventory['date'] = self.df_inventory['date'].fillna(max_date)
         # merging df_predictions, df_products and df_invetory
         self.df_merged = self.df_predictions.copy()
         self.df_merged = self.df_merged.merge(
@@ -325,11 +350,12 @@ class DataProcessor:
 
 if __name__ == "__main__":
     from pathlib import Path
+    date_filter = "2025-02-24"
     # Usar pathlib para definir y manejar la ruta base
     base_path = Path('C:/Users/YOGA/Desktop/repositories/caa/catusita/catusita_predictions')
     
     # Inicializar el procesador
-    processor = DataProcessor(base_path)
+    processor = DataProcessor(base_path, date_filter)
     processor.process_all()
 
     # Definir rutas para guardar los archivos

@@ -3,8 +3,9 @@ import pandas as pd
 from pathlib import Path
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
+from dateutil.relativedelta import relativedelta
 
 from utils.process_data.sunarp.sunarp_processor import SunarpProcessor
 from utils.process_data.sunat.sunat_processor import SunatProcessor
@@ -139,8 +140,13 @@ def process_data(date_filter=None):
     df_sunat.to_csv(DATA_PATHS['process'] / 'sunat_consolidated.csv', index=False)
     
     print("Processing Catusita data...")
-    start_date = "20160101"
-    end_date = date_filter.strftime("%Y%m%d")
+    start_date = "20230601"
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+    # if date_filter:
+    #     last_day_prev_month = (date_filter - relativedelta(months=1)).replace(day=1) - relativedelta(days=1)
+    #     end_date = last_day_prev_month.strftime("%Y%m%d")
+    # else:
+    #     end_date = "99999999"
     catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
     if date_filter:
@@ -245,7 +251,7 @@ def main_processor(calculator=0, date_filter=None):
         try:
             # Get the parent directory of 'data' folder
             base_path = str(DATA_PATHS['cleaned'].parent.parent)
-            processor = DataProcessor(base_path)
+            processor = DataProcessor(base_path, date_filter)
             processor.process_all()
             if processor.df_dashboard is not None:
                 processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)

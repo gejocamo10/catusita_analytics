@@ -18,7 +18,7 @@ class RFMProcessor:
     def get_transaction_summary(self):
         """Create transaction summary by article"""
         return self.df_catusita.groupby("articulo").agg({
-            "codigo": "nunique",
+            # "codigo": "nunique",
             "cantidad": "sum",
             "venta_pen": "sum",
             "transacciones": "sum",
@@ -64,12 +64,13 @@ class RFMProcessor:
         df_trans = df_trans[df_trans["articulo"].isin(active_products)]
 
         skus_fechas = self.get_top_codes(df_trans, "articulo", "fecha", var_threshold)
-        skus_clientes = self.get_top_codes(df_trans, "articulo", "codigo", var_threshold)
+        # skus_clientes = self.get_top_codes(df_trans, "articulo", "codigo", var_threshold)
         skus_cantidad = self.get_top_codes(df_trans, "articulo", "cantidad", var_threshold)
         skus_monto = self.get_top_codes(df_trans, "articulo", "venta_pen", var_threshold)
         skus_transacciones = self.get_top_codes(df_trans, "articulo", "transacciones", var_threshold)
 
-        lista_skus_top = list(set(skus_fechas + skus_clientes + skus_cantidad + skus_monto + skus_transacciones))
+        # lista_skus_top = list(set(skus_fechas + skus_clientes + skus_cantidad + skus_monto + skus_transacciones))
+        lista_skus_top = list(set(skus_fechas + skus_cantidad + skus_monto + skus_transacciones))
 
         max_year = self.df_catusita['fecha'].dt.year.max()
         max_month = self.df_catusita[self.df_catusita['fecha'].dt.year == max_year]['fecha'].dt.month.max()
@@ -78,7 +79,8 @@ class RFMProcessor:
             (self.df_catusita['fecha'].dt.month == max_month)
         ]['articulo'].unique())
 
-        df_rfm = pd.DataFrame(columns=["sku", "resencia", "fechas", "clientes", "cantidad", "monto", "transacciones"])
+        # df_rfm = pd.DataFrame(columns=["sku", "resencia", "fechas", "clientes", "cantidad", "monto", "transacciones"])
+        df_rfm = pd.DataFrame(columns=["sku", "resencia", "fechas", "cantidad", "monto", "transacciones"])
         
         for i, sku in enumerate(lista_skus_top):
             df_rfm.loc[i] = [
@@ -86,7 +88,7 @@ class RFMProcessor:
 
                 int(sku in current_skus),
                 int(sku in skus_fechas),
-                int(sku in skus_clientes),
+                # int(sku in skus_clientes),
                 int(sku in skus_cantidad),
                 int(sku in skus_monto),
                 int(sku in skus_transacciones)
