@@ -235,8 +235,8 @@ class DataProcessor:
         # ).astype("Float64")
 
         # adding costo_compra and compras_recomendadas
-        self.df_merged = self.df_merged.rename(columns={'caa': 'compras_recomendadas'})
-        # self.df_merged = self.df_merged.rename(columns={'compra_sugerida': 'compras_recomendadas'})
+        # self.df_merged = self.df_merged.rename(columns={'caa': 'prediccion_bloque1'})
+        self.df_merged = self.df_merged.rename(columns={'compra_sugerida': 'compras_recomendadas'})
         self.df_merged.loc[self.df_merged['demanda_mensual'] < 0, 'demanda_mensual'] = 0
         self.df_merged.loc[self.df_merged['compras_recomendadas'] < 0, 'compras_recomendadas'] = 0
         self.df_merged['compras_recomendadas'] = self.df_merged['compras_recomendadas'].apply(

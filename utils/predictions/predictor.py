@@ -167,6 +167,7 @@ class Predictor:
                     else:  # mean or median
                         y_pred = [model] * len(y_test)
                     
+                    y_pred = np.maximum(y_pred, 0)
                     score = self.weighted_mape(y_test, y_pred)
                     
                     if score < best_score:
@@ -197,6 +198,7 @@ class Predictor:
                                 else current_data)
                 pred = forecast_func(lookback_data['cantidad'].dropna(), alpha)
             
+            pred = np.maximum(pred, 0)
             predictions.append(pred)
             
             new_row = current_data.iloc[-1:].copy()
@@ -284,6 +286,7 @@ class Predictor:
                             test_pred.append(pred)
                             current_data = np.append(current_data, pred)
 
+                
                 test_score = self.weighted_mape(test_data['cantidad'], test_pred)
 
                 # Generate future predictions
