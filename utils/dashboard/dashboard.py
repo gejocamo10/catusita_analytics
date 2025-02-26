@@ -222,9 +222,12 @@ class DataProcessor:
         self.df_merged['demanda_mensual'] = self.df_merged['caa'] / self.df_merged['lt']
         self.df_merged['meses_proteccion'] = self.df_merged['corr_sd'] / self.df_merged['demanda_mensual']
 
+        # modificar period2 (caa_lt)
+        self.df_merged['caa_lt'] += self.df_merged['corr_sd'] * self.df_merged['rfm'].map({3: 0.4, 2: 0.3, 1: 0.2, 0: 0.1}).fillna(0)
+        
         # adding compra_sugerida
-        self.df_merged['sobrante'] = np.maximum(self.df_merged['stock'] + self.df_merged['backorder'] - self.df_merged['caa_lt'], 0)
-        self.df_merged['compra_sugerida'] = np.maximum(self.df_merged['caa'] - self.df_merged['sobrante'], 0)
+        self.df_merged['sobrante'] = np.maximum(self.df_merged['stock'].fillna(0) + self.df_merged['backorder'].fillna(0) - self.df_merged['caa'], 0)
+        self.df_merged['compra_sugerida'] = np.maximum(self.df_merged['caa_lt'].fillna(0) - self.df_merged['sobrante'], 0)
         self.df_merged['compra_sugerida'] = np.ceil(self.df_merged['compra_sugerida']).astype('Int64')
         self.df_merged['compra_sugerida'] = self.df_merged['compra_sugerida'].astype("Float64")
         self.df_merged['meses_proteccion'] = self.df_merged['meses_proteccion'].astype("Float64")
@@ -268,9 +271,6 @@ class DataProcessor:
                         ('verde' if pd.notna(row.get('rojo')) or pd.notna(row.get('amarillo')) else np.nan),
             axis=1
         )
-
-        # modificar period2 (caa_lt)
-        self.df_merged['caa_lt'] += self.df_merged['corr_sd'] * self.df_merged['rfm'].map({3: 0.4, 2: 0.3, 1: 0.2, 0: 0.1}).fillna(0)
 
         # filtrar solo las importantes para la tabla por fuente de suministro
         self.df_merged['demanda_mensual_usd'] = self.df_merged['demanda_mensual'] * self.df_merged['monto_usd']
