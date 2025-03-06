@@ -297,10 +297,12 @@ class DataProcessor:
             'rojo': '🔴'
         })
         self.df_download = self.df_merged[[
-            'date','articulo','fuente_suministro','stock','compras_recomendadas','demanda_mensual',
+            'date','articulo','fuente_suministro','stock','compras_recomendadas','demanda_mensual_usd',
             'meses_proteccion','riesgo','lt','mean_margen','ultima_fecha','monto_usd',
             'ultima_compra','costo_compra','rfm','backorder','holgura','quebro','va_a_quebrar','consumiendo_proteccion'
         ]]
+        # fuentes_validas = self.df_download.loc[self.df_download['articulo'].isin(self.df_backorder['articulo']), 'fuente_suministro'].unique()
+        # self.df_download = self.df_download[self.df_download['fuente_suministro'].isin(fuentes_validas)]
         self.df_dashboard = self.df_merged[[
             'date','articulo','fuente_suministro','stock','backorder','rfm','riesgo',
             'demanda_mensual','monto_usd','ultima_compra','compras_recomendadas','costo_compra'
@@ -323,7 +325,7 @@ class DataProcessor:
             'riesgo': 'Alerta',
             'monto_usd': 'Monto USD',
             'ultima_compra': 'Última Compra',
-            'demanda_mensual': 'Demanda Mensual',
+            'demanda_mensual_usd': 'Demanda Mensual',
             'lt': 'Lead Time',
             'mean_margen': 'Margen',
             'meses_proteccion': 'Meses proteccion',

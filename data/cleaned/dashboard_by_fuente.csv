@@ -1,7 +1,7 @@
 Fuente de Suministro,Lead Time,Recomendacion USD,Demanda Mensual USD
 affinia nakata - brasil,4,0,0
 affinia urba - brasil,4,0,0
-aisin - japon,6,378510,83600
+aisin - japon,6,358473,54626
 baldwin filters,4,0,0
 birene - cigueñales-culatas-ejes de levas,4,0,0
 boto tyres,4,0,0
@@ -15,9 +15,9 @@ corteco - brasil,4,0,0
 crc - limpia carburador,4,0,0
 ctr,4,0,0
 daewha - korea,4,0,0
-deestone,6,0,4676
+deestone,6,31225,4676
 delphi - cav - brasil,4,0,0
-denso - bujias - japon,3,0,253
+denso - bujias - japon,3,958,253
 denso - elementos - valvulas,4,0,0
 deruibo,4,0,0
 donaldson,4,0,0
@@ -35,15 +35,15 @@ glyco - alemania,4,0,0
 gmb - bombas de agua,4,0,0
 goetze,4,0,0
 indeco - cables,4,0,0
-ishikawa - discos de freno,6,0,109
-ishikawa - pastillas de freno,6,0,295
+ishikawa - discos de freno,6,1009,109
+ishikawa - pastillas de freno,6,2114,295
 ishikawa - zapatas de freno,6,0,0
-ito koyama - amortiguadores,6,0,1082
-ito koyama - bocamazas,6,0,45
+ito koyama - amortiguadores,6,9670,1184
+ito koyama - bocamazas,6,405,45
 ito koyama - cremalleras,6,0,0
 ito koyama - direccion,6,0,0
-ito koyama - palieres,6,0,301
-ito koyama - resortes,6,0,350
+ito koyama - palieres,6,2585,301
+ito koyama - resortes,6,4080,464
 ito koyama - torretas,6,0,0
 ito koyama - trapecios,6,0,0
 ito koyama - tricetas,0,0,0
@@ -61,7 +61,7 @@ monark - alemania,4,0,0
 moog - usa,3,0,0
 mrk - japon,4,0,0
 nachi - koyo - ntn - nsk - japon,4,0,0
-narva,4,0,5753
+narva,4,88249,5890
 nas - chumaceras,4,0,0
 nas - pfi - zkl - mba,4,0,0
 novaquimica - peru,1,0,0
@@ -74,13 +74,13 @@ prestone - mexico,3,0,0
 prestone - usa,3,0,0
 prextoline - grasas,2,0,0
 prextoline - lubricantes,2,0,0
-prextoline - usa,4,0,0
+prextoline - usa,4,2998,678
 rover - usa,4,0,0
 sabo- brasil,4,0,0
 sachs - argentina,4,0,0
 sachs - brasil,4,0,0
-sakura - radiadores,6,0,498
-sakura filter,6,0,1947
+sakura - radiadores,6,4800,498
+sakura filter,6,14044,2115
 sankei - japon,4,0,0
 sealco - usa,3,0,0
 sealed power - usa,4,0,0
@@ -93,8 +93,8 @@ timken - rodajes,4,0,0
 tkl - taiwan,4,0,0
 toyo - japon,4,0,0
 trw - brasil,4,0,0
-valvoline,2,0,5242
-valvoline - usa,3,0,9655
+valvoline,2,11726,5305
+valvoline - usa,3,33249,9655
 varga,4,0,0
 vdo - brasil,4,0,0
 versachem - usa,1,0,0
