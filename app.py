@@ -139,29 +139,24 @@ def process_data(date_filter=None):
         df_sunat = df_sunat[df_sunat['fecha'] < date_filter]
     df_sunat.to_csv(DATA_PATHS['process'] / 'sunat_consolidated.csv', index=False)
     
-    # print("Processing Catusita data...")
-    # start_date = "20230601"
-    # end_date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-    # if date_filter:
-    #     last_day_prev_month = (date_filter - relativedelta(months=1)).replace(day=1) - relativedelta(days=1)
-    #     end_date = last_day_prev_month.strftime("%Y%m%d")
-    # else:
-    #     end_date = "99999999"
-    ## ---------- descomenta abajo para la version con api
-    # catusita_processor = CatusitaProcessor(start_date, end_date)
-    # df_catusita = catusita_processor.process_data()
-    # if date_filter:
-    #     df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
-    #     df_catusita = df_catusita[df_catusita['fecha'] < date_filter]
-    # catusita_processor.save_data(df_catusita)
-
     print("Processing Catusita data...")
-    catusita_processor = CatusitaProcessor()
+    start_date = "20250314"
+    end_date = "20250314"
+    date_filter = None
+    catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
     if date_filter:
         df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
         df_catusita = df_catusita[df_catusita['fecha'] < date_filter]
     catusita_processor.save_data(df_catusita)
+
+    # print("Processing Catusita data...")
+    # catusita_processor = CatusitaProcessor()
+    # df_catusita = catusita_processor.process_data()
+    # if date_filter:
+    #     df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
+    #     df_catusita = df_catusita[df_catusita['fecha'] < date_filter]
+    # catusita_processor.save_data(df_catusita)
     
     print("All processing completed successfully!")
     return df_sunarp, df_sunat, df_catusita
@@ -234,51 +229,53 @@ def main_processor(calculator=0, date_filter=None):
     else:
         df_sunarp, df_sunat, df_catusita = load_processed_data(date_filter)
     
-    # if df_catusita is not None:
-    #     print("\nProcessing RFM analysis...")
-    #     lista_skus_rfm, df_rfm = process_rfm(df_catusita)
-    #     # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
-    #     # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
-    #     df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
-    #     print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
+    if df_catusita is not None:
+        print("todo listo")
+        # print("\nProcessing RFM analysis...")
+        # lista_skus_rfm, df_rfm = process_rfm(df_catusita)
+        # # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
+        # # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
+        # df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
+        # print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
-    # if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
-    #     print("\nProcessing correlations for all SKUs...")
-    #     autos_sig, partes_sig, all_sig = process_correlations(
-    #         df_catusita, df_sunarp, df_sunat
-    #     )
-    #     print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
+    if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
+        print("todo listo")
+        # print("\nProcessing correlations for all SKUs...")
+        # autos_sig, partes_sig, all_sig = process_correlations(
+        #     df_catusita, df_sunarp, df_sunat
+        # )
+        # print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
         
-        print("\nProcessing predictions...")
-        predictor = Predictor()
-        predictions_df = predictor.process_predictions()
-        if predictions_df is not None:
-            predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
-            print(f"Generated predictions for {len(predictions_df)} SKUs")
+        # print("\nProcessing predictions...")
+        # predictor = Predictor()
+        # predictions_df = predictor.process_predictions()
+        # if predictions_df is not None:
+        #     predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
+        #     print(f"Generated predictions for {len(predictions_df)} SKUs")
     
-        print("\nProcessing dashboard data...")
-        try:
-            # Get the parent directory of 'data' folder
-            base_path = str(DATA_PATHS['cleaned'].parent.parent)
-            processor = DataProcessor(base_path, date_filter)
-            processor.process_all()
-            if processor.df_dashboard is not None:
-                processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
-                print(f"Generated dashboard data for {len(processor.df_dashboard)} SKUs")
-            else:
-                print("Warning: No dashboard data generated")
-            if processor.df_dashboard_by_fuente is not None:
-                processor.df_dashboard_by_fuente.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
-                print(f"Generated dashboard data by fuente for {len(processor.df_dashboard_by_fuente)} fuentes")
-            else:
-                print("Warning: No dashboard data by fuente generated")
-            if processor.df_download is not None:
-                processor.df_download.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
-                print(f"Generated download data for {len(processor.df_download)} SKUs")
-            else:
-                print("Warning: No download data generated")           
-        except Exception as e:
-            print(f"Error processing dashboard datasets: {str(e)}")
+        # print("\nProcessing dashboard data...")
+        # try:
+        #     # Get the parent directory of 'data' folder
+        #     base_path = str(DATA_PATHS['cleaned'].parent.parent)
+        #     processor = DataProcessor(base_path, date_filter)
+        #     processor.process_all()
+        #     if processor.df_dashboard is not None:
+        #         processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
+        #         print(f"Generated dashboard data for {len(processor.df_dashboard)} SKUs")
+        #     else:
+        #         print("Warning: No dashboard data generated")
+        #     if processor.df_dashboard_by_fuente is not None:
+        #         processor.df_dashboard_by_fuente.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
+        #         print(f"Generated dashboard data by fuente for {len(processor.df_dashboard_by_fuente)} fuentes")
+        #     else:
+        #         print("Warning: No dashboard data by fuente generated")
+        #     if processor.df_download is not None:
+        #         processor.df_download.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
+        #         print(f"Generated download data for {len(processor.df_download)} SKUs")
+        #     else:
+        #         print("Warning: No download data generated")           
+        # except Exception as e:
+        #     print(f"Error processing dashboard datasets: {str(e)}")
     
     return df_sunarp, df_sunat, df_catusita
 
@@ -311,7 +308,7 @@ def main():
 
         if st.button("Ejecutar Procesamiento de Datos"):
             with st.spinner("Procesando datos y generando predicciones..."):
-                df_sunarp, df_sunat, df_catusita = main_processor(calculator=0, date_filter=str(date_filter_date))
+                df_sunarp, df_sunat, df_catusita = main_processor(calculator=1, date_filter=str(date_filter_date))
             st.success("Procesamiento de datos y predicciones completado!")
             
             print("\nProcessed data information:")

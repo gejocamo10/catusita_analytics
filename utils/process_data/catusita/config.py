@@ -10,16 +10,19 @@ PATHS = {
 
 COLUMNS_TO_KEEP = [
     'fecha',
+    'documento',
     'articulo',
     'cantidad',
     'transacciones',
     'venta_pen',
+    'venta_usd',
     'fuente_suministro',
     'costo'
 ]
 
 COLUMN_RENAME_MAPPING = {
     "dateDocument": "fecha",
+    "codeClient": "documento",
     "codeArticle": "articulo",
     "nameArticle": "descripcion",
     "nameSupply": "fuente_suministro",
@@ -36,7 +39,7 @@ KITS_RENAME_MAPPING = {
     "Código 3": "cod_3"
 }
 
-FILTER_COLUMNS = ["cantidad", "venta_pen"]
+FILTER_COLUMNS = ["cantidad", "venta_pen", "venta_usd"]
 FILTER_DATE='2024/12/01'
 
 # PATHS = {
@@ -51,11 +54,13 @@ FILTER_DATE='2024/12/01'
 
 # COLUMNS_TO_KEEP = [
 #     'fecha',
+#     'documento',
 #     'articulo',
-#     'codigo',
+#     # 'codigo',
 #     'cantidad',
 #     'transacciones',
 #     'venta_pen',
+#     'venta_usd',
 #     'fuente_suministro',
 #     'costo'
 # ]
@@ -75,5 +80,5 @@ FILTER_DATE='2024/12/01'
 #     "Código 3": "cod_3"
 # }
 
-# FILTER_COLUMNS = ["cantidad", "venta_pen"]
+# FILTER_COLUMNS = ["cantidad", "venta_pen", "venta_usd"]
 # FILTER_DATE='2024/12/01'

@@ -1,4 +1,5 @@
 import os
+import time
 import pandas as pd
 from utils.process_data.catusita.config import (
     PATHS, COLUMN_RENAME_MAPPING, KITS_RENAME_MAPPING, 
@@ -37,9 +38,24 @@ class CatusitaProcessor:
 
     def read_main_data(self):
         """Obtiene los datos desde la API y los estructura en un DataFrame compatible."""
-        df_catusita = self.fetch_data_from_api()
+        # df_catusita = self.fetch_data_from_api()
+        df_catusita = pd.DataFrame()
+        max_intentos = 5
+        intentos = 0
+        while df_catusita.empty and intentos < max_intentos:
+            df_catusita = self.fetch_data_from_api()
+            if df_catusita.empty:
+                intentos += 1
+                print(f"Intento {intentos}/{max_intentos}: No se obtuvieron datos. Reintentando en 2 segundos...")
+                time.sleep(2)
+        if df_catusita.empty:
+            print("No se obtuvieron datos después de 5 intentos.")
+        else:
+            print("Datos del api de ventas obtenidos exitosamente.")
+        print("Datos del api de ventas obtenidos exitosamente.")
         df_catusita = df_catusita.rename(columns={
             'dateDocument':'fecha', 
+            'codeClient': 'documento',
             'codeArticle': 'articulo', 
             'nameArticle': 'nombre', 
             'nameSupply': 'fuente_suministro', 
@@ -108,8 +124,8 @@ class CatusitaProcessor:
     def process_data(self):
         """Realiza el procesamiento completo de los datos."""
         df_catusita = self.read_main_data()
-        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'], format='%Y-%m-%d')
         df_catusita = format_column_names(df_catusita).rename(columns=COLUMN_RENAME_MAPPING)
+        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'], format='%Y-%m-%d')
      
         df_catusita['transacciones'] = 1
      
