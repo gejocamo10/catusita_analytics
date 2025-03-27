@@ -10,6 +10,6 @@ FILE_CATEGORIES = {
     'Menores': [],
     'Livianos': [],
     'Pesados': [],
-    'Híbridos': [],
+    'Hibridos': [],
     'Remolques': []
 }

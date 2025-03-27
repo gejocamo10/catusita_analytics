@@ -7,8 +7,8 @@ url = "http://api.catusita.com:8083/api/sales/forDate"
 
 # Parámetros de la consulta
 params = {
-    "Date1": "20230601",
-    "Date2": "20250223"
+    "Date1": "20250101",
+    "Date2": "20250131"
 }
 
 # Realizar la solicitud GET

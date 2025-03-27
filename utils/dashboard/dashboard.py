@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import requests
 import yfinance as yf
-import time
 import math
 from datetime import datetime, timedelta
 from typing import Tuple, Optional
@@ -42,23 +41,16 @@ class DataProcessor:
         self.df_products = pd.read_csv(f"{self.path}/data/process/catusita_consolidated.csv")
         try:
             self.df_backorder = pd.read_excel(f"{self.path}/data/raw/catusita/backorder12_12.xlsx")
+            self.df_backorder["articulo"] = self.df_backorder["articulo"].astype(str).str.lower()
         except FileNotFoundError:
             self.df_backorder = pd.DataFrame()
         prev_day = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-        # self.df_inventory = pd.DataFrame()  # Inicializar como DataFrame vacío
-        # self.df_tc = pd.DataFrame()
-        # while self.df_inventory.empty or self.df_tc.empty:  
-        #     self.df_inventory = self.fetch_data_from_api("http://api.catusita.com:8083/api/stock/forDate", {"DateStock": prev_day})
-        #     self.df_tc = self.fetch_data_from_api("http://api.catusita.com:8083/api/article/data")
-        #     if self.df_inventory.empty or self.df_tc.empty:
-        #         print("No se obtuvieron datos. Reintentando en 5 segundos...")
-        #         time.sleep(1)
         self.df_inventory = self.fetch_data_from_api("http://api.catusita.com:8083/api/stock/forDate", {"DateStock": prev_day})
         self.df_tc = self.fetch_data_from_api("http://api.catusita.com:8083/api/article/data")
 
 
         ### to_datime
-        self.df_products['fecha'] = pd.to_datetime(self.df_products['fecha'], dayfirst = True)
+        self.df_products['fecha'] = pd.to_datetime(self.df_products['fecha'])
         self.df_predictions['date'] = pd.to_datetime(self.df_predictions['date'])
 
         self.df_tc = self.df_tc[self.df_tc["lastDateBuy"] != "0001-01-01T00:00:00"]
@@ -80,7 +72,7 @@ class DataProcessor:
         self.df_tc = self.df_tc[self.df_tc['ultima_fecha'].notna()]
         
         ## df_product
-        self.df_products['fecha_mensual'] = self.df_products['fecha'].dt.to_period('M').dt.to_timestamp()
+        self.df_products['fecha_mensual'] = self.df_products['fecha'].dt.to_period('M').dt.to_timestamp()  
         # crear nueva columna de fuente_suministro_ultima para identificar la fuente asociada a la ultima fecha de venta del articulo
         ultima_fecha = self.df_products.groupby('articulo')['fecha'].max().reset_index()
         df_ultima_fuente = self.df_products.merge(ultima_fecha, on=['articulo', 'fecha'], how='inner')
@@ -89,7 +81,7 @@ class DataProcessor:
             on='articulo',
             how='left',
             suffixes=('', '_ultima')
-        )    
+        )         
         # crear variable precio
         self.df_products['precio'] = self.df_products['venta_pen'] / self.df_products['cantidad']
         # crear variable margen
@@ -433,3 +425,4 @@ if __name__ == "__main__":
     processor.df_dashboard.to_csv(cleaned_path / 'dashboard.csv', index=False)
     processor.df_dashboard_by_fuente.to_csv(cleaned_path / 'dashboard_by_fuente.csv', index=False)
     processor.df_download.to_csv(cleaned_path / 'download.csv', index=False)
+
