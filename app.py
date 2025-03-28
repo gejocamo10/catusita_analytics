@@ -140,8 +140,8 @@ def process_data(date_filter=None):
     df_sunat.to_csv(DATA_PATHS['process'] / 'sunat_consolidated.csv', index=False)
     
     print("Processing Catusita data...")
-    start_date = "20250314"
-    end_date = "20250314"
+    start_date = "20210101"
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
     date_filter = None
     catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
@@ -149,14 +149,6 @@ def process_data(date_filter=None):
         df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
         df_catusita = df_catusita[df_catusita['fecha'] < date_filter]
     catusita_processor.save_data(df_catusita)
-
-    # print("Processing Catusita data...")
-    # catusita_processor = CatusitaProcessor()
-    # df_catusita = catusita_processor.process_data()
-    # if date_filter:
-    #     df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
-    #     df_catusita = df_catusita[df_catusita['fecha'] < date_filter]
-    # catusita_processor.save_data(df_catusita)
     
     print("All processing completed successfully!")
     return df_sunarp, df_sunat, df_catusita
@@ -230,7 +222,7 @@ def main_processor(calculator=0, date_filter=None):
         df_sunarp, df_sunat, df_catusita = load_processed_data(date_filter)
     
     if df_catusita is not None:
-        print("todo listo")
+        print("rfm")
         # print("\nProcessing RFM analysis...")
         # lista_skus_rfm, df_rfm = process_rfm(df_catusita)
         # # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
@@ -239,7 +231,7 @@ def main_processor(calculator=0, date_filter=None):
         # print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
     if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
-        print("todo listo")
+        print("predicciones")
         # print("\nProcessing correlations for all SKUs...")
         # autos_sig, partes_sig, all_sig = process_correlations(
         #     df_catusita, df_sunarp, df_sunat
