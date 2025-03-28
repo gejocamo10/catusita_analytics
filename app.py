@@ -222,8 +222,7 @@ def main_processor(calculator=0, date_filter=None):
         df_sunarp, df_sunat, df_catusita = load_processed_data(date_filter)
     
     if df_catusita is not None:
-        print("rfm")
-        # print("\nProcessing RFM analysis...")
+        print("\nProcessing RFM analysis...")
         # lista_skus_rfm, df_rfm = process_rfm(df_catusita)
         # # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
         # # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
@@ -231,19 +230,19 @@ def main_processor(calculator=0, date_filter=None):
         # print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
     if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
-        print("predicciones")
+        print("correlations")
         # print("\nProcessing correlations for all SKUs...")
         # autos_sig, partes_sig, all_sig = process_correlations(
         #     df_catusita, df_sunarp, df_sunat
         # )
         # print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
         
-        # print("\nProcessing predictions...")
-        # predictor = Predictor()
-        # predictions_df = predictor.process_predictions()
-        # if predictions_df is not None:
-        #     predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
-        #     print(f"Generated predictions for {len(predictions_df)} SKUs")
+        print("\nProcessing predictions...")
+        predictor = Predictor()
+        predictions_df = predictor.process_predictions()
+        if predictions_df is not None:
+            predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
+            print(f"Generated predictions for {len(predictions_df)} SKUs")
     
         # print("\nProcessing dashboard data...")
         # try:
@@ -300,7 +299,7 @@ def main():
 
         if st.button("Ejecutar Procesamiento de Datos"):
             with st.spinner("Procesando datos y generando predicciones..."):
-                df_sunarp, df_sunat, df_catusita = main_processor(calculator=1, date_filter=str(date_filter_date))
+                df_sunarp, df_sunat, df_catusita = main_processor(calculator=0, date_filter=str(date_filter_date))
             st.success("Procesamiento de datos y predicciones completado!")
             
             print("\nProcessed data information:")

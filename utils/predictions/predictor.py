@@ -34,6 +34,13 @@ class Predictor:
         monthly_data['fecha'] = pd.to_datetime(monthly_data.apply(
             lambda row: pd.Timestamp(year=int(row['year']), month=int(row['month']), day=1), axis=1))
         monthly_data['lt'] = monthly_data['lt'].fillna(0)
+
+        hoy = pd.Timestamp.today()
+        primer_dia_mes_actual = pd.Timestamp(hoy.year, hoy.month, 1)
+        fecha_limite = primer_dia_mes_actual - pd.DateOffset(months=1)
+
+        monthly_data = monthly_data[monthly_data['fecha'] <= fecha_limite]
+
         return monthly_data.sort_values(by=['articulo', 'fecha'])
 
     def select_features_with_lasso(self, X, y, feature_columns, alpha=0.01):
@@ -71,7 +78,11 @@ class Predictor:
             else:
                 feature_columns.append(col_name)
         
-        data = data.dropna()
+        data = data.dropna(axis=1, how='all')
+        data = data.fillna(0)
+        start_col = data.columns.get_loc("fecha")
+        feature_columns = data.iloc[:, start_col + 1:].columns
+        feature_columns = feature_columns.tolist()
         
         if len(data) > 0 and len(feature_columns) > 0:
             X = data[feature_columns]
@@ -186,17 +197,28 @@ class Predictor:
         current_data = data.copy()
         current_data = current_data.sort_values(by="fecha")
 
+        fecha_actual = current_data['fecha'].max()
+        primer_dia_mes_actual = pd.Timestamp(fecha_actual.year, fecha_actual.month, 1)
+        primer_dia_mes_anterior = primer_dia_mes_actual - pd.DateOffset(months=1)
+        fecha_inicio = primer_dia_mes_anterior - pd.DateOffset(months=6)
+        fecha_fin = primer_dia_mes_anterior + pd.offsets.MonthEnd(0)
+        ultimos_seis_meses = current_data[
+            (current_data['fecha'] >= fecha_inicio) & (current_data['fecha'] <= fecha_fin)
+        ]
+
         for _ in range(num_months):
             if best_model_name in ['xgboost', 'linear']:
                 pred = best_model.predict(current_data[feature_columns].iloc[-1:])[0]
             elif best_model_name in ['mean', 'median']:
-                last_6_months = current_data.iloc[-6:]  # Tomar solo los últimos 6 meses
-                pred = last_6_months['cantidad'].mean() if best_model_name == 'mean' else last_6_months['cantidad'].median()
+                if not ultimos_seis_meses.empty:
+                    pred = (ultimos_seis_meses['cantidad'].sum())/6 if best_model_name == 'mean' else ultimos_seis_meses['cantidad'].median()
+                else:
+                    pred = 0  # O puedes usar np.nan si prefieres manejarlo diferente
             else:  # ES
                 forecast_func, alpha = best_model
                 lookback_data = (current_data.iloc[-lookback:] if lookback 
                                 else current_data)
-                pred = forecast_func(lookback_data['cantidad'].dropna(), alpha)
+                pred = forecast_func(lookback_data['cantidad'], alpha)
             
             pred = np.maximum(pred, 0)
             predictions.append(pred)
@@ -219,7 +241,8 @@ class Predictor:
         results = []
         no_sku_process_list = []
         count = 0
-        for sku in all_monthly_data['articulo'].unique():
+        # for sku in all_monthly_data['articulo'].unique():
+        for sku in ["ghm10028a","ghm065225","ghm065146"]:
             print(f"Processing SKU: {sku}")
             try:
                 sku_data = all_monthly_data[all_monthly_data['articulo'] == sku].copy()
@@ -244,26 +267,49 @@ class Predictor:
 
                 # if best_config is None:
                 #     continue
+                
+                hoy = pd.Timestamp.today()
+                primer_dia_mes_actual = pd.Timestamp(hoy.year, hoy.month, 1)
+                primer_dia_mes_anterior = primer_dia_mes_actual - pd.DateOffset(months=1)
+                fecha_inicio = primer_dia_mes_anterior - pd.DateOffset(months=6)
+                fecha_fin = primer_dia_mes_anterior + pd.offsets.MonthEnd(0)  # último día del mes anterior
+                ultimos_seis_meses = sku_data[
+                    (sku_data['fecha'] >= fecha_inicio) & (sku_data['fecha'] <= fecha_fin)
+                ]
+                catusita = (ultimos_seis_meses['cantidad'].sum())/6
 
                 if best_config is None or best_model is None:
+                    # Ordenar por fecha por seguridad
+                    sku_data = sku_data.sort_values(by='fecha')
+                    
+                    if not ultimos_seis_meses.empty:
+                        avg_cantidad = (ultimos_seis_meses['cantidad'].sum())/6
+                        caa = avg_cantidad
+                        caa_lt = avg_cantidad
+                        catusita = avg_cantidad
+                        best_model_name = 'mean'
+                    else:
+                        caa = np.nan
+                        caa_lt = np.nan
+                        best_model_name = np.nan
+
                     results.append({
                         'sku': sku,
                         'lt': lt,
                         'date': last_date,
-                        'model': np.nan,
+                        'model': best_model_name,
                         'real': 0,
-                        'catusita': np.nan,
+                        'catusita': catusita,
                         'lookback_period': np.nan,
                         'features_used': 'none',
-                        'caa': np.nan,
-                        'caa_lt': np.nan,
+                        'caa': caa,
+                        'caa_lt': caa_lt,
                         'corr_sd': np.nan,
                         'loss': np.nan
                     })
-                    print(f"SKU {sku} no pudo ser evaluado. Datos insuficientes o problema en los datos.")
-                    no_sku_process_list.append({'sku':sku})
-                    # pd.DataFrame(no_sku_process_list,columns=['sku']).to_csv('data/cleaned/no_sku_process_list.csv')
-                    count = count + 1
+
+                    no_sku_process_list.append({'sku': sku})
+                    count += 1
                     continue
 
                 best_model_name, lookback = best_config
@@ -309,10 +355,19 @@ class Predictor:
                 period1 = sum(future_predictions[:lt])
                 period2 = sum(future_predictions[lt:2*lt])
 
-                # period2 += 0.4 * pred_std
+                last_six_months_mean = (ultimos_seis_meses['cantidad'].sum())/6
 
-                last_six_months_mean = sku_data.tail(6)['cantidad'].mean()
+                # Reemplazar predicción si es 0 y hay al menos un valor en ese rango
+                if (
+                    period1 == 0 and period2 == 0 and
+                    ultimos_seis_meses['cantidad'].notna().sum() > 0
+                ):
+                    avg_cantidad = (ultimos_seis_meses['cantidad'].sum())/6
+                    period1 = avg_cantidad
+                    period2 = avg_cantidad
+                    best_model_name = 'mean'
 
+                # Registro final
                 results.append({
                     'sku': sku,
                     'lt': lt,
