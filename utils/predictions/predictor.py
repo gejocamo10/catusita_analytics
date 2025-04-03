@@ -130,10 +130,12 @@ class Predictor:
         best_config = None
         best_model = None
         
+        data = data.sort_values(by='fecha')
+
         if len(data) < 4:
             return None, None, float('inf')
             
-        # val_data = data[data['year'] == val_year] if val_year else data
+        # val_data = data[data['year'] == val_year] if val_6year else data
         val_data = data
         val_size = 6
         
@@ -241,8 +243,8 @@ class Predictor:
         results = []
         no_sku_process_list = []
         count = 0
-        # for sku in all_monthly_data['articulo'].unique():
-        for sku in ["ghm10028a","ghm065225","ghm065146"]:
+        for sku in all_monthly_data['articulo'].unique():
+        # for sku in ["ghm10028a","ghm065225","ghm065146"]:
             print(f"Processing SKU: {sku}")
             try:
                 sku_data = all_monthly_data[all_monthly_data['articulo'] == sku].copy()

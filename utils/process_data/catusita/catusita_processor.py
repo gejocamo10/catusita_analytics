@@ -161,26 +161,3 @@ class CatusitaProcessor:
         output_file = os.path.join(output_path, 'catusita_consolidated.csv')
         df['fecha'] = pd.to_datetime(df['fecha'], format='%Y-%m-%d')
         df.to_csv(output_file, index=False)
-
-if __name__ == "__main__":
-    from datetime import datetime, timedelta
-    from pathlib import Path
-
-    # Fechas de inicio y fin
-    start_date = datetime(2021, 1, 1)
-    end_date = datetime.now() - timedelta(days=1)
-
-    # Formato requerido por la API: YYYYMMDD
-    start_str = start_date.strftime("%Y%m%d")
-    end_str = end_date.strftime("%Y%m%d")
-
-    # Inicializar el procesador
-    processor = CatusitaProcessor(start_str, end_str)
-
-    # Ejecutar procesamiento y guardar resultados
-    df_result = processor.process_data()
-    processor.save_data(df_result)
-
-    # Mensaje final
-    print("Procesamiento finalizado.")
-    print(f"Total de registros procesados: {len(df_result)}")
