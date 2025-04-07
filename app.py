@@ -142,6 +142,8 @@ def process_data(date_filter=None):
     print("Processing Catusita data...")
     start_date = "20210101"
     end_date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+    # start_date = "20250404"
+    # end_date = "20250404"
     date_filter = None
     catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
@@ -238,35 +240,35 @@ def main_processor(calculator=0, date_filter=None):
         # print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
         
         print("\nProcessing predictions...")
-        predictor = Predictor()
-        predictions_df = predictor.process_predictions()
-        if predictions_df is not None:
-            predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
-            print(f"Generated predictions for {len(predictions_df)} SKUs")
+        # predictor = Predictor()
+        # predictions_df = predictor.process_predictions()
+        # if predictions_df is not None:
+        #     predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
+        #     print(f"Generated predictions for {len(predictions_df)} SKUs")
     
-        # print("\nProcessing dashboard data...")
-        # try:
-        #     # Get the parent directory of 'data' folder
-        #     base_path = str(DATA_PATHS['cleaned'].parent.parent)
-        #     processor = DataProcessor(base_path, date_filter)
-        #     processor.process_all()
-        #     if processor.df_dashboard is not None:
-        #         processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
-        #         print(f"Generated dashboard data for {len(processor.df_dashboard)} SKUs")
-        #     else:
-        #         print("Warning: No dashboard data generated")
-        #     if processor.df_dashboard_by_fuente is not None:
-        #         processor.df_dashboard_by_fuente.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
-        #         print(f"Generated dashboard data by fuente for {len(processor.df_dashboard_by_fuente)} fuentes")
-        #     else:
-        #         print("Warning: No dashboard data by fuente generated")
-        #     if processor.df_download is not None:
-        #         processor.df_download.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
-        #         print(f"Generated download data for {len(processor.df_download)} SKUs")
-        #     else:
-        #         print("Warning: No download data generated")           
-        # except Exception as e:
-        #     print(f"Error processing dashboard datasets: {str(e)}")
+        print("\nProcessing dashboard data...")
+        try:
+            # Get the parent directory of 'data' folder
+            base_path = str(DATA_PATHS['cleaned'].parent.parent)
+            processor = DataProcessor(base_path, date_filter)
+            processor.process_all()
+            if processor.df_dashboard is not None:
+                processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
+                print(f"Generated dashboard data for {len(processor.df_dashboard)} SKUs")
+            else:
+                print("Warning: No dashboard data generated")
+            if processor.df_dashboard_by_fuente is not None:
+                processor.df_dashboard_by_fuente.to_csv(DATA_PATHS['cleaned'] / 'dashboard_by_fuente.csv', index=False)
+                print(f"Generated dashboard data by fuente for {len(processor.df_dashboard_by_fuente)} fuentes")
+            else:
+                print("Warning: No dashboard data by fuente generated")
+            if processor.df_download is not None:
+                processor.df_download.to_csv(DATA_PATHS['cleaned'] / 'download.csv', index=False)
+                print(f"Generated download data for {len(processor.df_download)} SKUs")
+            else:
+                print("Warning: No download data generated")           
+        except Exception as e:
+            print(f"Error processing dashboard datasets: {str(e)}")
     
     return df_sunarp, df_sunat, df_catusita
 
