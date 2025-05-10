@@ -1,4 +1,5 @@
 import os
+import time
 import pandas as pd
 from utils.process_data.catusita.config import (
     PATHS, COLUMN_RENAME_MAPPING, KITS_RENAME_MAPPING, 
@@ -9,28 +10,73 @@ from utils.process_data.catusita.utils import (
     format_column_names, clean_string_columns, clean_article_names
 )
 
+import requests
+
 class CatusitaProcessor:
-    def __init__(self):
+    def __init__(self, start_date, end_date):
         self.base_path = DATA_PATHS['raw_catusita']
-     
+        self.start_date = start_date
+        self.end_date = end_date
+        self.api_url = "http://api.catusita.com:8083/api/sales/forDate"
+        # http://api.catusita.com:8083/api/sales/forDate?Date1=20250101&Date2=20250115
+
     def _get_full_path(self, relative_path):
         """Helper method to construct full path from base path and relative path"""
         return os.path.join(self.base_path, relative_path.lstrip('/'))
-     
+    
+    def fetch_data_from_api(self):
+        """Obtiene datos desde la API y los convierte en un DataFrame."""
+        params = {"Date1": self.start_date, "Date2": self.end_date}
+        # Headers opcionales
+        headers = {
+            "Accept": "application/json"
+        }
+        try:
+            response = requests.get(self.api_url, params=params, headers=headers)
+            response.raise_for_status()  # Lanza un error si el código de estado no es 200
+            # Intentar obtener la clave "data" del JSON
+            json_response = response.json()         
+            if "data" in json_response and isinstance(json_response["data"], list):
+                return pd.DataFrame(json_response["data"])
+            else:
+                print("Advertencia: La respuesta de la API no contiene una lista válida.")
+                return pd.DataFrame()
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            return pd.DataFrame()
+
     def read_main_data(self):
-        """Read and combine all sheets from the main Excel file"""
-        file_path = self._get_full_path(PATHS['input_file'])
-        
-        df_catusita = pd.read_excel(file_path, sheet_name="Sheet1")
-        lista_columnas = df_catusita.columns.tolist()
-        
-        excel_file = pd.ExcelFile(file_path)
-        list_hojas = excel_file.sheet_names[1:]
-        
-        for hoja in list_hojas:
-            df_catusita_hoja = pd.read_excel(file_path, sheet_name=hoja, header=None)
-            df_catusita_hoja.columns = lista_columnas
-            df_catusita = pd.concat([df_catusita, df_catusita_hoja], ignore_index=True)
+        """Obtiene los datos desde la API y los estructura en un DataFrame compatible."""
+        # df_catusita = self.fetch_data_from_api()
+        df_catusita = pd.DataFrame()
+        max_intentos = 5
+        intentos = 0
+        while df_catusita.empty and intentos < max_intentos:
+            df_catusita = self.fetch_data_from_api()
+            if df_catusita.empty:
+                intentos += 1
+                print(f"Intento {intentos}/{max_intentos}: No se obtuvieron datos. Reintentando en 2 segundos...")
+                time.sleep(2)
+        if df_catusita.empty:
+            print("No se obtuvieron datos después de 5 intentos.")
+        else:
+            print("Datos del api de ventas obtenidos exitosamente.")
+                
+        df_catusita = df_catusita.rename(columns={
+            'dateDocument':'fecha', 
+            'codeClient': 'documento',
+            'codeArticle': 'articulo', 
+            'nameArticle': 'nombre', 
+            'nameSupply': 'fuente_suministro', 
+            'quantity': 'cantidad', 
+            'amountSOL': 'venta_pen', 
+            'amountUSD': 'venta_usd',
+            'cost': 'costo'
+        })
+        df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha']).dt.date
+
+        if df_catusita.empty:
+            print("No se obtuvieron datos desde la API.")
         
         return df_catusita
 
@@ -40,7 +86,7 @@ class CatusitaProcessor:
         df_lt = pd.read_csv(file_path_lt)
         df_lt = df_lt.rename(columns={"fuente_de_suministro": "fuente_suministro"})
         return df_lt
-
+    
     def process_kits_and_blacklist(self, df):
         """Process kits and blacklist filtering"""
         kits_file_path = self._get_full_path(PATHS['kits_file'])
@@ -83,16 +129,15 @@ class CatusitaProcessor:
         df_final['articulo'] = df_final['articulo'].str.lower()
 
         return df_final
-
+        
     def process_data(self):
-        """Main processing function"""
+        """Realiza el procesamiento completo de los datos."""
         df_catusita = self.read_main_data()
         df_catusita = format_column_names(df_catusita).rename(columns=COLUMN_RENAME_MAPPING)
-     
         df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'], format='%Y-%m-%d')
+     
         df_catusita['transacciones'] = 1
      
-        df_catusita["cia"].replace("Pagina 1 de 1", pd.NA, inplace=True)
         df_catusita.dropna(how='all', inplace=True)
         df_catusita = clean_article_names(df_catusita)
         df_catusita = clean_string_columns(df_catusita)
@@ -111,7 +156,7 @@ class CatusitaProcessor:
         return df_catusita
 
     def save_data(self, df):
-        """Save processed data"""
+        """Guarda los datos procesados en un archivo CSV."""
         output_path = DATA_PATHS['process']
         output_file = os.path.join(output_path, 'catusita_consolidated.csv')
         df['fecha'] = pd.to_datetime(df['fecha'], format='%Y-%m-%d')

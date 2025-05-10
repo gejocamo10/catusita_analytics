@@ -3,8 +3,9 @@ import pandas as pd
 from pathlib import Path
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
+from dateutil.relativedelta import relativedelta
 
 from utils.process_data.sunarp.sunarp_processor import SunarpProcessor
 from utils.process_data.sunat.sunat_processor import SunatProcessor
@@ -139,7 +140,12 @@ def process_data(date_filter=None):
     df_sunat.to_csv(DATA_PATHS['process'] / 'sunat_consolidated.csv', index=False)
     
     print("Processing Catusita data...")
-    catusita_processor = CatusitaProcessor()
+    start_date = "20210101"
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+    # start_date = "20250404"
+    # end_date = "20250404"
+    date_filter = None
+    catusita_processor = CatusitaProcessor(start_date, end_date)
     df_catusita = catusita_processor.process_data()
     if date_filter:
         df_catusita['fecha'] = pd.to_datetime(df_catusita['fecha'])
@@ -219,31 +225,32 @@ def main_processor(calculator=0, date_filter=None):
     
     if df_catusita is not None:
         print("\nProcessing RFM analysis...")
-        lista_skus_rfm, df_rfm = process_rfm(df_catusita)
-        # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
-        # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
-        df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
-        print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
+        # lista_skus_rfm, df_rfm = process_rfm(df_catusita)
+        # # df_skus_rfm = pd.DataFrame({'sku': lista_skus_rfm})
+        # # df_skus_rfm.to_csv(DATA_PATHS['process'] / 'df_skus_rfm.csv', index=False)
+        # df_rfm.to_csv(DATA_PATHS['process'] / 'df_rfm.csv', index=False)
+        # print(f"RFM analysis completed. Found {len(lista_skus_rfm)} SKUs")
 
     if df_catusita is not None and df_sunarp is not None and df_sunat is not None:
-        print("\nProcessing correlations for all SKUs...")
-        autos_sig, partes_sig, all_sig = process_correlations(
-            df_catusita, df_sunarp, df_sunat
-        )
-        print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
+        print("correlations")
+        # print("\nProcessing correlations for all SKUs...")
+        # autos_sig, partes_sig, all_sig = process_correlations(
+        #     df_catusita, df_sunarp, df_sunat
+        # )
+        # print(f"Found significant correlations for {len(all_sig.sku.unique())} SKUs")
         
         print("\nProcessing predictions...")
-        predictor = Predictor()
-        predictions_df = predictor.process_predictions()
-        if predictions_df is not None:
-            predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
-            print(f"Generated predictions for {len(predictions_df)} SKUs")
+        # predictor = Predictor()
+        # predictions_df = predictor.process_predictions()
+        # if predictions_df is not None:
+        #     predictions_df.to_csv(DATA_PATHS['cleaned'] / 'predictions.csv', index=False)
+        #     print(f"Generated predictions for {len(predictions_df)} SKUs")
     
         print("\nProcessing dashboard data...")
         try:
             # Get the parent directory of 'data' folder
             base_path = str(DATA_PATHS['cleaned'].parent.parent)
-            processor = DataProcessor(base_path)
+            processor = DataProcessor(base_path, date_filter)
             processor.process_all()
             if processor.df_dashboard is not None:
                 processor.df_dashboard.to_csv(DATA_PATHS['cleaned'] / 'dashboard.csv', index=False)
@@ -294,7 +301,7 @@ def main():
 
         if st.button("Ejecutar Procesamiento de Datos"):
             with st.spinner("Procesando datos y generando predicciones..."):
-                df_sunarp, df_sunat, df_catusita = main_processor(calculator=1, date_filter=str(date_filter_date))
+                df_sunarp, df_sunat, df_catusita = main_processor(calculator=0, date_filter=str(date_filter_date))
             st.success("Procesamiento de datos y predicciones completado!")
             
             print("\nProcessed data information:")

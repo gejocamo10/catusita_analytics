@@ -1,7 +1,7 @@
 Fuente de Suministro,Lead Time,Recomendacion USD,Demanda Mensual USD
 affinia nakata - brasil,4,0,0
 affinia urba - brasil,4,0,0
-aisin - japon,6,257917,42020
+aisin - japon,6,280409,44349
 baldwin filters,4,0,0
 birene - cigueñales-culatas-ejes de levas,4,0,0
 boto tyres,4,0,0
@@ -15,7 +15,7 @@ corteco - brasil,4,0,0
 crc - limpia carburador,4,0,0
 ctr,4,0,0
 daewha - korea,4,0,0
-deestone,6,14258,1947
+deestone,6,0,0
 delphi - cav - brasil,4,0,0
 denso - bujias - japon,3,0,0
 denso - elementos - valvulas,4,0,0
@@ -35,15 +35,16 @@ glyco - alemania,4,0,0
 gmb - bombas de agua,4,0,0
 goetze,4,0,0
 indeco - cables,4,0,0
-ishikawa - discos de freno,6,1096,135
+ishikawa - cigueñales-culatas-ejes de levas,0,0,0
+ishikawa - discos de freno,6,0,0
 ishikawa - pastillas de freno,6,0,0
 ishikawa - zapatas de freno,6,0,0
-ito koyama - amortiguadores,6,107621,15169
-ito koyama - bocamazas,6,1287,151
+ito koyama - amortiguadores,6,0,0
+ito koyama - bocamazas,6,0,0
 ito koyama - cremalleras,6,0,0
 ito koyama - direccion,6,0,0
-ito koyama - palieres,6,15150,2041
-ito koyama - resortes,6,43142,6256
+ito koyama - palieres,6,0,0
+ito koyama - resortes,6,5015,795
 ito koyama - torretas,6,0,0
 ito koyama - trapecios,6,0,0
 ito koyama - tricetas,0,0,0
@@ -61,7 +62,7 @@ monark - alemania,4,0,0
 moog - usa,3,0,0
 mrk - japon,4,0,0
 nachi - koyo - ntn - nsk - japon,4,0,0
-narva,4,0,0
+narva,4,184107,42306
 nas - chumaceras,4,0,0
 nas - pfi - zkl - mba,4,0,0
 novaquimica - peru,1,0,0
@@ -80,7 +81,7 @@ sabo- brasil,4,0,0
 sachs - argentina,4,0,0
 sachs - brasil,4,0,0
 sakura - radiadores,6,0,0
-sakura filter,6,78426,12519
+sakura filter,6,21766,3287
 sankei - japon,4,0,0
 sealco - usa,3,0,0
 sealed power - usa,4,0,0
@@ -93,7 +94,7 @@ timken - rodajes,4,0,0
 tkl - taiwan,4,0,0
 toyo - japon,4,0,0
 trw - brasil,4,0,0
-valvoline,2,1305,580
+valvoline,2,0,0
 valvoline - usa,3,0,0
 varga,4,0,0
 vdo - brasil,4,0,0

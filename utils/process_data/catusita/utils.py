@@ -15,6 +15,6 @@ def clean_string_columns(df):
 
 def clean_article_names(df):
     """Clean article names by removing special characters"""
-    df["nombre_articulo"] = df["nombre_articulo"].str.lstrip("#")
-    df["nombre_articulo"] = df["nombre_articulo"].str.lstrip('"')
+    df["nombre"] = df["nombre"].str.lstrip("#")
+    df["nombre"] = df["nombre"].str.lstrip('"')
     return df
